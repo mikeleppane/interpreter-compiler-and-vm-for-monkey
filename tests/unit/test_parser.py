@@ -2,6 +2,7 @@ import pytest
 
 from src.lexer import Lexer
 from src.libast import (
+    Boolean,
     ExpressionStatement,
     Identifier,
     InfixExpression,
@@ -15,6 +16,10 @@ from src.libparser import Parser
 
 def check_parser_errors(parser: Parser):
     assert len(parser.errors) == 0
+
+
+def check_boolean_literal():
+    pass
 
 
 def test_let_statements():
@@ -151,8 +156,8 @@ def test_parsing_prefix_expressions(input: str, operator: str, int_value: int):
         ["5 != 5;", 5, "!=", 5],
     ],
 )
-def test_parsing_infix_expressions(
-    input: str, left_value: int, operator: str, right_value: int
+def test_parsing_infix_expressions_with_int(
+    input: str, left_value: int | bool, operator: str, right_value: int | bool
 ):
     lexer = Lexer(input)
 
@@ -178,8 +183,50 @@ def test_parsing_infix_expressions(
 
 
 @pytest.mark.parametrize(
+    "input,left_value,operator,right_value",
+    [
+        ["true == true", True, "==", True],
+        ["true != false", True, "!=", False],
+        ["false == false", False, "==", False],
+    ],
+)
+def test_parsing_infix_expressions_with_bool(
+    input: str, left_value: int | bool, operator: str, right_value: int | bool
+):
+    lexer = Lexer(input)
+
+    parser = Parser(lexer=lexer)
+    program = parser.parse_program()
+
+    assert len(program.statements) == 1
+    check_parser_errors(parser=parser)
+
+    for statement in program.statements:
+        assert isinstance(statement, ExpressionStatement)
+
+        assert isinstance(statement.expression, InfixExpression)
+        assert statement.expression.operator == operator
+
+        assert isinstance(statement.expression.left, Boolean)
+        assert statement.expression.left.value == left_value
+        assert statement.expression.left.token_literal() == str(left_value).lower()
+
+        assert isinstance(statement.expression.right, Boolean)
+        assert statement.expression.right.value == right_value
+        assert statement.expression.right.token_literal() == str(right_value).lower()
+
+
+@pytest.mark.parametrize(
     "input,expected",
     [
+        [
+            "true",
+            "true",
+        ],
+        [
+            "false",
+            "false",
+        ],
         [
             "-a * b",
             "((-a) * b)",

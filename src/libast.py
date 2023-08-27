@@ -146,3 +146,18 @@ class InfixExpression(Expression):
 
     def to_string(self) -> str:
         return f"({self.left.to_string()} {self.operator} {self.right.to_string()})"
+
+
+@dataclass
+class Boolean(Expression):
+    token: Token
+    value: bool
+
+    def expression_node(self) -> None:
+        ...
+
+    def token_literal(self) -> str:
+        return self.token.literal
+
+    def to_string(self) -> str:
+        return self.token.literal

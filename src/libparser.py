@@ -5,6 +5,7 @@ from typing import TypeAlias
 
 from src.lexer import Lexer
 from src.libast import (
+    Boolean,
     Expression,
     ExpressionStatement,
     Identifier,
@@ -61,6 +62,8 @@ class Parser:
         self.register_prefix(TokenType.INT, self.parse_integer_literal)
         self.register_prefix(TokenType.BANG, self.parse_prefix_expression)
         self.register_prefix(TokenType.MINUS, self.parse_prefix_expression)
+        self.register_prefix(TokenType.TRUE, self.parse_boolean)
+        self.register_prefix(TokenType.FALSE, self.parse_boolean)
         self.register_infix(TokenType.PLUS, self.parse_infix_expression)
         self.register_infix(TokenType.MINUS, self.parse_infix_expression)
         self.register_infix(TokenType.SLASH, self.parse_infix_expression)
@@ -219,3 +222,9 @@ class Parser:
                 right=right,
             )
         return None
+
+    def parse_boolean(self) -> Expression:
+        return Boolean(
+            token=self.current_token,
+            value=self.current_token.has_token_type(TokenType.TRUE),
+        )
