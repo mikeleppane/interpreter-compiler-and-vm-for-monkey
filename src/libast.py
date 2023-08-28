@@ -196,3 +196,20 @@ class IfExpression(Expression):
         if self.alternative:
             out += f" else {self.alternative.to_string()}"
         return out
+
+
+@dataclass
+class FunctionLiteral(Expression):
+    token: Token
+    parameters: list[Identifier]
+    body: BlockStatement
+
+    def expression_node(self) -> None:
+        ...
+
+    def token_literal(self) -> str:
+        return self.token.literal
+
+    def to_string(self) -> str:
+        params = ", ".join(p.to_string() for p in self.parameters)
+        return f"{self.token_literal()}({params}) {self.body.to_string()}"

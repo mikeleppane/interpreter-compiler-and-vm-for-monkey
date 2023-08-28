@@ -4,6 +4,7 @@ from src.lexer import Lexer
 from src.libast import (
     Boolean,
     ExpressionStatement,
+    FunctionLiteral,
     Identifier,
     IfExpression,
     InfixExpression,
@@ -396,3 +397,69 @@ def test_if_else_expression():
         assert len(statement.expression.alternative.statements) == 1
 
         assert statement.expression.alternative.statements[0].token_literal() == "y"
+
+
+def test_function_literal_parsing():
+    lexer = Lexer("fn(x, y) { x + y; }")
+
+    parser = Parser(lexer=lexer)
+    program = parser.parse_program()
+
+    assert len(program.statements) == 1
+    check_parser_errors(parser=parser)
+
+    for statement in program.statements:
+        assert isinstance(statement, ExpressionStatement)
+
+        assert isinstance(statement.expression, FunctionLiteral)
+
+        assert len(statement.expression.parameters) == 2
+
+        assert statement.expression.parameters[0].token_literal() == "x"
+        assert statement.expression.parameters[1].token_literal() == "y"
+
+        assert len(statement.expression.body.statements) == 1
+
+        assert isinstance(statement.expression.body.statements[0], ExpressionStatement)
+
+        assert isinstance(
+            statement.expression.body.statements[0].expression, InfixExpression
+        )
+
+        assert (
+            statement.expression.body.statements[0].expression.left.token_literal()
+            == "x"
+        )
+
+        assert statement.expression.body.statements[0].expression.operator == "+"
+
+        assert (
+            statement.expression.body.statements[0].expression.right.token_literal()
+            == "y"
+        )
+
+
+@pytest.mark.parametrize(
+    "input,expected_params",
+    [
+        ["fn() {};", []],
+        ["fn(x) {};", ["x"]],
+        ["fn(x, y, z) {};", ["x", "y", "z"]],
+    ],
+)
+def test_function_parameter_parsing(input: str, expected_params: list[str]):
+    lexer = Lexer(input)
+
+    parser = Parser(lexer=lexer)
+    program = parser.parse_program()
+
+    check_parser_errors(parser=parser)
+
+    assert isinstance(program.statements[0], ExpressionStatement)
+
+    assert isinstance(program.statements[0].expression, FunctionLiteral)
+
+    assert len(program.statements[0].expression.parameters) == len(expected_params)
+
+    for i, param in enumerate(expected_params):
+        assert program.statements[0].expression.parameters[i].token_literal() == param

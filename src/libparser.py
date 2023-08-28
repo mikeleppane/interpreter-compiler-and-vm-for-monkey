@@ -9,6 +9,7 @@ from src.libast import (
     Boolean,
     Expression,
     ExpressionStatement,
+    FunctionLiteral,
     Identifier,
     IfExpression,
     InfixExpression,
@@ -68,6 +69,7 @@ class Parser:
         self.register_prefix(TokenType.FALSE, self.parse_boolean)
         self.register_prefix(TokenType.LPAREN, self.parse_grouped_expression)
         self.register_prefix(TokenType.IF, self.parse_if_expression)
+        self.register_prefix(TokenType.FUNCTION, self.parse_function_expression)
         self.register_infix(TokenType.PLUS, self.parse_infix_expression)
         self.register_infix(TokenType.MINUS, self.parse_infix_expression)
         self.register_infix(TokenType.SLASH, self.parse_infix_expression)
@@ -285,3 +287,41 @@ class Parser:
             self.next_token()
 
         return BlockStatement(token=current_token, statements=statements)
+
+    def parse_function_expression(self) -> Expression | None:
+        current_token = self.current_token
+
+        if not self.expect_peek(TokenType.LPAREN):
+            return None
+
+        parameters = self.parse_function_parameters()
+
+        if not self.expect_peek(TokenType.LBRACE):
+            return None
+
+        body = self.parse_block_statement()
+
+        return FunctionLiteral(token=current_token, parameters=parameters, body=body)
+
+    def parse_function_parameters(self) -> list[Identifier]:
+        identifiers: list[Identifier] = []
+
+        if self.peek_token.has_token_type(TokenType.RPAREN):
+            self.next_token()
+            return identifiers
+
+        self.next_token()
+
+        identifier = Identifier(token=self.current_token, value=self.current_token.literal)
+        identifiers.append(identifier)
+
+        while self.peek_token.has_token_type(TokenType.COMMA):
+            self.next_token()
+            self.next_token()
+            identifier = Identifier(token=self.current_token, value=self.current_token.literal)
+            identifiers.append(identifier)
+
+        if not self.expect_peek(TokenType.RPAREN):
+            return []
+
+        return identifiers
