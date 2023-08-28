@@ -5,6 +5,7 @@ from src.libast import (
     Boolean,
     ExpressionStatement,
     Identifier,
+    IfExpression,
     InfixExpression,
     IntegerLiteral,
     LetStatement,
@@ -329,3 +330,69 @@ def test_operator_precedence_parsing(input: str, expected: str):
     check_parser_errors(parser=parser)
 
     assert program.to_string() == expected
+
+
+def test_if_expression():
+    lexer = Lexer("if (x < y) { x }")
+
+    parser = Parser(lexer=lexer)
+    program = parser.parse_program()
+
+    assert len(program.statements) == 1
+    check_parser_errors(parser=parser)
+
+    for statement in program.statements:
+        assert isinstance(statement, ExpressionStatement)
+
+        assert isinstance(statement.expression, IfExpression)
+
+        assert isinstance(statement.expression.condition, InfixExpression)
+        assert statement.expression.condition.left.token_literal() == "x"
+        assert statement.expression.condition.operator == "<"
+        assert statement.expression.condition.right.token_literal() == "y"
+
+        assert len(statement.expression.consequence.statements) == 1
+        assert isinstance(
+            statement.expression.consequence.statements[0], ExpressionStatement
+        )
+        assert (
+            statement.expression.consequence.statements[0].expression.token_literal()
+            == "x"
+        )
+
+        assert statement.expression.alternative is None
+
+
+def test_if_else_expression():
+    lexer = Lexer("if (x < y) { x } else {y}")
+
+    parser = Parser(lexer=lexer)
+    program = parser.parse_program()
+
+    assert len(program.statements) == 1
+    check_parser_errors(parser=parser)
+
+    for statement in program.statements:
+        assert isinstance(statement, ExpressionStatement)
+
+        assert isinstance(statement.expression, IfExpression)
+
+        assert isinstance(statement.expression.condition, InfixExpression)
+        assert statement.expression.condition.left.token_literal() == "x"
+        assert statement.expression.condition.operator == "<"
+        assert statement.expression.condition.right.token_literal() == "y"
+
+        assert len(statement.expression.consequence.statements) == 1
+        assert isinstance(
+            statement.expression.consequence.statements[0], ExpressionStatement
+        )
+        assert (
+            statement.expression.consequence.statements[0].expression.token_literal()
+            == "x"
+        )
+
+        assert statement.expression.alternative is not None
+
+        assert len(statement.expression.alternative.statements) == 1
+
+        assert statement.expression.alternative.statements[0].token_literal() == "y"

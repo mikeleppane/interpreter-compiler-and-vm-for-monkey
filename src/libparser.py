@@ -5,10 +5,12 @@ from typing import TypeAlias
 
 from src.lexer import Lexer
 from src.libast import (
+    BlockStatement,
     Boolean,
     Expression,
     ExpressionStatement,
     Identifier,
+    IfExpression,
     InfixExpression,
     IntegerLiteral,
     LetStatement,
@@ -65,6 +67,7 @@ class Parser:
         self.register_prefix(TokenType.TRUE, self.parse_boolean)
         self.register_prefix(TokenType.FALSE, self.parse_boolean)
         self.register_prefix(TokenType.LPAREN, self.parse_grouped_expression)
+        self.register_prefix(TokenType.IF, self.parse_if_expression)
         self.register_infix(TokenType.PLUS, self.parse_infix_expression)
         self.register_infix(TokenType.MINUS, self.parse_infix_expression)
         self.register_infix(TokenType.SLASH, self.parse_infix_expression)
@@ -235,3 +238,50 @@ class Parser:
             return None
 
         return expr
+
+    def parse_if_expression(self) -> Expression | None:
+        current_token = self.current_token
+
+        if not self.expect_peek(TokenType.LPAREN):
+            return None
+
+        self.next_token()
+        condition = self.parse_expression(Precedence.LOWEST)
+        if condition is None:
+            return None
+
+        if not self.expect_peek(TokenType.RPAREN):
+            return None
+
+        if not self.expect_peek(TokenType.LBRACE):
+            return None
+
+        consequence = self.parse_block_statement()
+
+        if_expr = IfExpression(token=current_token, condition=condition, consequence=consequence)
+
+        if self.peek_token.has_token_type(TokenType.ELSE):
+            self.next_token()
+
+            if not self.expect_peek(TokenType.LBRACE):
+                return None
+
+            if_expr.alternative = self.parse_block_statement()
+
+        return if_expr
+
+    def parse_block_statement(self) -> BlockStatement:
+        current_token = self.current_token
+        statements: list[Statement] = []
+
+        self.next_token()
+
+        while not self.current_token.has_token_type(
+            TokenType.RBRACE
+        ) and not self.current_token.has_token_type(TokenType.EOF):
+            statement = self.parse_statement()
+            if statement:
+                statements.append(statement)
+            self.next_token()
+
+        return BlockStatement(token=current_token, statements=statements)

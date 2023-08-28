@@ -161,3 +161,38 @@ class Boolean(Expression):
 
     def to_string(self) -> str:
         return self.token.literal
+
+
+@dataclass
+class BlockStatement(Statement):
+    token: Token
+    statements: list[Statement] = field(default_factory=list)
+
+    def statement_node(self) -> None:
+        ...
+
+    def token_literal(self) -> str:
+        return self.token.literal
+
+    def to_string(self) -> str:
+        return "".join(stm.to_string() for stm in self.statements)
+
+
+@dataclass
+class IfExpression(Expression):
+    token: Token
+    condition: Expression
+    consequence: BlockStatement
+    alternative: BlockStatement | None = None
+
+    def expression_node(self) -> None:
+        ...
+
+    def token_literal(self) -> str:
+        return self.token.literal
+
+    def to_string(self) -> str:
+        out = f"if {self.condition.to_string()} {self.consequence.to_string()}"
+        if self.alternative:
+            out += f" else {self.alternative.to_string()}"
+        return out
