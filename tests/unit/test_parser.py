@@ -144,6 +144,29 @@ def test_parsing_prefix_expressions(input: str, operator: str, int_value: int):
 
 
 @pytest.mark.parametrize(
+    "input,operator,boolean", [["!true", "!", True], ["!false", "!", False]]
+)
+def test_parsing_prefix_expressions_with_boolean(
+    input: str, operator: str, boolean: bool
+):
+    lexer = Lexer(input)
+
+    parser = Parser(lexer=lexer)
+    program = parser.parse_program()
+
+    assert len(program.statements) == 1
+    check_parser_errors(parser=parser)
+
+    for statement in program.statements:
+        assert isinstance(statement, ExpressionStatement)
+        assert isinstance(statement.expression, PrefixExpression)
+        assert statement.expression.operator == operator
+        assert isinstance(statement.expression.right, Boolean)
+        assert statement.expression.right.value == boolean
+        assert statement.expression.right.token_literal() == str(boolean).lower()
+
+
+@pytest.mark.parametrize(
     "input,left_value,operator,right_value",
     [
         ["5 + 5", 5, "+", 5],
@@ -274,6 +297,26 @@ def test_parsing_infix_expressions_with_bool(
         [
             "3 + 4 * 5 == 3 * 1 + 4 * 5",
             "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+        ],
+        [
+            "1 + (2 + 3) + 4",
+            "((1 + (2 + 3)) + 4)",
+        ],
+        [
+            "(5 + 5) * 2",
+            "((5 + 5) * 2)",
+        ],
+        [
+            "2 / (5 + 5)",
+            "(2 / (5 + 5))",
+        ],
+        [
+            "-(5 + 5)",
+            "(-(5 + 5))",
+        ],
+        [
+            "!(true == true)",
+            "(!(true == true))",
         ],
     ],
 )

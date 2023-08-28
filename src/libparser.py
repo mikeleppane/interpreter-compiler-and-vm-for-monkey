@@ -56,7 +56,7 @@ class Parser:
     infix_parse_fns: dict[TokenType, InfixParseFn] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        self.next_token()
+        self.peek_token: Token = self.lexer.next_token()
         self.next_token()
         self.register_prefix(TokenType.IDENT, self.parse_identifier)
         self.register_prefix(TokenType.INT, self.parse_integer_literal)
@@ -64,6 +64,7 @@ class Parser:
         self.register_prefix(TokenType.MINUS, self.parse_prefix_expression)
         self.register_prefix(TokenType.TRUE, self.parse_boolean)
         self.register_prefix(TokenType.FALSE, self.parse_boolean)
+        self.register_prefix(TokenType.LPAREN, self.parse_grouped_expression)
         self.register_infix(TokenType.PLUS, self.parse_infix_expression)
         self.register_infix(TokenType.MINUS, self.parse_infix_expression)
         self.register_infix(TokenType.SLASH, self.parse_infix_expression)
@@ -74,12 +75,8 @@ class Parser:
         self.register_infix(TokenType.GT, self.parse_infix_expression)
 
     def next_token(self) -> None:
-        if hasattr(self, "peek_token"):
-            self.current_token: Token = self.peek_token
-            self.peek_token: Token = self.lexer.next_token()
-        else:
-            self.peek_token: Token = self.lexer.next_token()
-            self.current_token: Token = self.peek_token
+        self.current_token: Token = self.peek_token
+        self.peek_token: Token = self.lexer.next_token()
 
     def parse_program(self) -> Program:
         program = Program()
@@ -228,3 +225,13 @@ class Parser:
             token=self.current_token,
             value=self.current_token.has_token_type(TokenType.TRUE),
         )
+
+    def parse_grouped_expression(self) -> Expression | None:
+        self.next_token()
+
+        expr = self.parse_expression(Precedence.LOWEST)
+
+        if not self.expect_peek(TokenType.RPAREN):
+            return None
+
+        return expr
