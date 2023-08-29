@@ -28,8 +28,8 @@ def check_boolean_literal():
 def test_let_statements():
     input = """
     let x = 5;
-    let y = 10;
-    let foobar = 838383;
+    let y = true;
+    let foobar = y;
 """
 
     lexer = Lexer(input)
@@ -41,6 +41,7 @@ def test_let_statements():
     check_parser_errors(parser=parser)
 
     expected_identifiers = ["x", "y", "foobar"]
+    expected_values = [5, True, "y"]
 
     for i, ident in enumerate(expected_identifiers):
         statement = program.statements[i]
@@ -49,6 +50,10 @@ def test_let_statements():
         assert isinstance(statement, LetStatement)
         assert statement.name.value == ident
         assert statement.name.token_literal() == ident
+
+        assert statement.value is not None
+
+        assert statement.value.value == expected_values[i]
 
 
 def test_let_statements_with_invalid_input():
