@@ -7,6 +7,7 @@ from src.lexer import Lexer
 from src.libast import (
     BlockStatement,
     Boolean,
+    CallExpression,
     Expression,
     ExpressionStatement,
     FunctionLiteral,
@@ -45,6 +46,7 @@ precedences = {
     TokenType.MINUS: Precedence.SUM,
     TokenType.SLASH: Precedence.PRODUCT,
     TokenType.ASTERISK: Precedence.PRODUCT,
+    TokenType.LPAREN: Precedence.CALL,
 }
 
 
@@ -78,6 +80,7 @@ class Parser:
         self.register_infix(TokenType.NOT_EQ, self.parse_infix_expression)
         self.register_infix(TokenType.LT, self.parse_infix_expression)
         self.register_infix(TokenType.GT, self.parse_infix_expression)
+        self.register_infix(TokenType.LPAREN, self.parse_call_expression)
 
     def next_token(self) -> None:
         self.current_token: Token = self.peek_token
@@ -107,7 +110,9 @@ class Parser:
         current_token = self.current_token
         if not self.expect_peek(TokenType.IDENT):
             return None
-        identifier = Identifier(token=self.current_token, value=self.current_token.literal)
+        identifier = Identifier(
+            token=self.current_token, value=self.current_token.literal
+        )
         let_stm = LetStatement(token=current_token, name=identifier)
 
         if not self.expect_peek(TokenType.ASSIGN):
@@ -158,7 +163,9 @@ class Parser:
     def parse_expression(self, precedence: int) -> Expression | None:
         prefix = self.prefix_parse_fns.get(self.current_token.token_type)
         if prefix is None:
-            message = f"no prefix parse function for {self.current_token.token_type} found"
+            message = (
+                f"no prefix parse function for {self.current_token.token_type} found"
+            )
             self.errors.append(message)
             return None
         left_expr = prefix()
@@ -260,7 +267,9 @@ class Parser:
 
         consequence = self.parse_block_statement()
 
-        if_expr = IfExpression(token=current_token, condition=condition, consequence=consequence)
+        if_expr = IfExpression(
+            token=current_token, condition=condition, consequence=consequence
+        )
 
         if self.peek_token.has_token_type(TokenType.ELSE):
             self.next_token()
@@ -312,16 +321,52 @@ class Parser:
 
         self.next_token()
 
-        identifier = Identifier(token=self.current_token, value=self.current_token.literal)
+        identifier = Identifier(
+            token=self.current_token, value=self.current_token.literal
+        )
         identifiers.append(identifier)
 
         while self.peek_token.has_token_type(TokenType.COMMA):
             self.next_token()
             self.next_token()
-            identifier = Identifier(token=self.current_token, value=self.current_token.literal)
+            identifier = Identifier(
+                token=self.current_token, value=self.current_token.literal
+            )
             identifiers.append(identifier)
 
         if not self.expect_peek(TokenType.RPAREN):
             return []
 
         return identifiers
+
+    def parse_call_expression(self, function: Expression) -> Expression | None:
+        current_token = self.current_token
+        arguments = self.parse_call_arguments()
+        return CallExpression(
+            token=current_token, arguments=arguments, function=function
+        )
+
+    def parse_call_arguments(self) -> list[Expression]:
+        arguments: list[Expression] = []
+
+        if self.peek_token.has_token_type(TokenType.RPAREN):
+            self.next_token()
+            return arguments
+
+        self.next_token()
+
+        expression = self.parse_expression(Precedence.LOWEST)
+        if expression is not None:
+            arguments.append(expression)
+
+        while self.peek_token.has_token_type(TokenType.COMMA):
+            self.next_token()
+            self.next_token()
+            expression = self.parse_expression(Precedence.LOWEST)
+            if expression is not None:
+                arguments.append(expression)
+
+        if not self.expect_peek(TokenType.RPAREN):
+            return []
+
+        return arguments

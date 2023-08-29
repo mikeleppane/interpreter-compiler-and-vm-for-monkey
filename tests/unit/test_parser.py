@@ -3,6 +3,7 @@ import pytest
 from src.lexer import Lexer
 from src.libast import (
     Boolean,
+    CallExpression,
     ExpressionStatement,
     FunctionLiteral,
     Identifier,
@@ -320,6 +321,12 @@ def test_parsing_infix_expressions_with_bool(
             "!(true == true)",
             "(!(true == true))",
         ],
+        ["a + add(b * c) + d", "((a + add((b * c))) + d)"],
+        [
+            "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+            "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+        ],
+        ["add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"],
     ],
 )
 def test_operator_precedence_parsing(input: str, expected: str):
@@ -463,3 +470,36 @@ def test_function_parameter_parsing(input: str, expected_params: list[str]):
 
     for i, param in enumerate(expected_params):
         assert program.statements[0].expression.parameters[i].token_literal() == param
+
+
+def test_call_expression_parsing():
+    lexer = Lexer("add(1, 2 * 3, 4 + 5);")
+
+    parser = Parser(lexer=lexer)
+    program = parser.parse_program()
+
+    assert len(program.statements) == 1
+    check_parser_errors(parser=parser)
+
+    for statement in program.statements:
+        assert isinstance(statement, ExpressionStatement)
+
+        assert isinstance(statement.expression, CallExpression)
+
+        assert statement.expression.function.token_literal() == "add"
+
+        assert len(statement.expression.arguments) == 3
+
+        assert statement.expression.arguments[0].token_literal() == "1"
+
+        assert isinstance(statement.expression.arguments[1], InfixExpression)
+
+        assert statement.expression.arguments[1].left.token_literal() == "2"
+        assert statement.expression.arguments[1].operator == "*"
+        assert statement.expression.arguments[1].right.token_literal() == "3"
+
+        assert isinstance(statement.expression.arguments[2], InfixExpression)
+
+        assert statement.expression.arguments[2].left.token_literal() == "4"
+        assert statement.expression.arguments[2].operator == "+"
+        assert statement.expression.arguments[2].right.token_literal() == "5"

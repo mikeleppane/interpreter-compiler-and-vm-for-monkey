@@ -213,3 +213,20 @@ class FunctionLiteral(Expression):
     def to_string(self) -> str:
         params = ", ".join(p.to_string() for p in self.parameters)
         return f"{self.token_literal()}({params}) {self.body.to_string()}"
+
+
+@dataclass
+class CallExpression:
+    token: Token
+    function: Expression
+    arguments: list[Expression]
+
+    def expression_node(self) -> None:
+        ...
+
+    def token_literal(self) -> str:
+        return self.token.literal
+
+    def to_string(self) -> str:
+        args = ", ".join(a.to_string() for a in self.arguments)
+        return f"{self.function.to_string()}({args})"
