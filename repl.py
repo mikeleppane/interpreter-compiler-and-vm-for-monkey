@@ -1,7 +1,9 @@
 import getpass
 
+from src.evaluator import eval
 from src.lexer import Lexer
 from src.libparser import Parser
+from src.object import Null
 
 
 class Repl:
@@ -17,7 +19,9 @@ class Repl:
             if len(parser.errors) > 0:
                 self.print_parser_errors(parser.errors)
                 continue
-            print(program.to_string())
+            evaluated = eval(program)
+            if not isinstance(evaluated, Null):
+                print(evaluated.inspect())
 
     def print_parser_errors(self, errors: list[str]) -> None:
         print("🐒")

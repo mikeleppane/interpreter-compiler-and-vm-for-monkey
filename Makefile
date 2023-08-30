@@ -1,21 +1,21 @@
-SRC_DIR = ./src/
+SOURCES = ./src/ repl.py
 
 .PHONY: check fix schema run
 
 check:
 	poetry run mypy --version
-	poetry run mypy $(SRC_DIR) repl.py
+	poetry run mypy $(SOURCES)
 	poetry run black --version
-	poetry run black --check --line-length=100 $(SRC_DIR) repl.py
+	poetry run black --check --line-length=100 $(SOURCES)
 	poetry run isort --version
-	poetry run isort --check-only $(SRC_DIR) repl.py
+	poetry run isort --check-only $(SOURCES)
 	poetry run ruff --version
-	poetry run ruff check $(SRC_DIR) repl.py
+	poetry run ruff check $(SOURCES)
 
 fix:
-	poetry run black --line-length=100 $(SRC_DIR) repl.py
-	poetry run isort $(SRC_DIR) repl.py
-	poetry run ruff check --fix $(SRC_DIR) repl.py
+	poetry run black --line-length=100 $(SOURCES)
+	poetry run isort $(SOURCES)
+	poetry run ruff check --fix $(SOURCES)
 
 test:
 	poetry run pytest -v tests/
