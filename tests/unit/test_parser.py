@@ -46,13 +46,9 @@ def test_let_statements():
     for i, ident in enumerate(expected_identifiers):
         statement = program.statements[i]
 
-        assert statement.token_literal() == "let"
         assert isinstance(statement, LetStatement)
+        assert statement.token_literal() == "let"
         assert statement.name.value == ident
-        assert statement.name.token_literal() == ident
-
-        assert statement.value is not None
-
         assert statement.value.value == expected_values[i]
 
 
@@ -332,6 +328,9 @@ def test_parsing_infix_expressions_with_bool(
             "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
         ],
         ["add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"],
+        ["let x = 1 * 2 * 3 * 4 * 5", "let x = ((((1 * 2) * 3) * 4) * 5);"],
+        ["x * y / 2 + 3 * 8 - 123", "((((x * y) / 2) + (3 * 8)) - 123)"],
+        ["true == false", "(true == false)"],
     ],
 )
 def test_operator_precedence_parsing(input: str, expected: str):

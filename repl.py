@@ -1,6 +1,7 @@
 import getpass
 
 from src.lexer import Lexer
+from src.libparser import Parser
 
 
 class Repl:
@@ -11,15 +12,23 @@ class Repl:
             if line == "exit" or not line:
                 break
             lexer = Lexer(line)
-            while True:
-                token = lexer.next_token()
-                if token.token_type == "EOF":
-                    break
-                print(token)
+            parser = Parser(lexer)
+            program = parser.parse_program()
+            if len(parser.errors) > 0:
+                self.print_parser_errors(parser.errors)
+                continue
+            print(program.to_string())
+
+    def print_parser_errors(self, errors: list[str]) -> None:
+        print("🐒")
+        print("Woops! We ran into some monkey business here!")
+        print("  parser errors:")
+        for error in errors:
+            print(f"\t{error}")
 
 
 if __name__ == "__main__":
-    print(f"Hello {getpass.getuser()}! This is the Monkey programming language!\n")
+    print(f"Hello {getpass.getuser()}! This is the Monkey programming language!")
     print("Feel free to type in commands")
     repl = Repl()
     repl.run()

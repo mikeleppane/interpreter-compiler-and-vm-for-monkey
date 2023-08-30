@@ -1,7 +1,9 @@
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, TypeAlias
 
 from src.tokens import Token
+
+ObjectType: TypeAlias = str
 
 
 class Node(Protocol):
@@ -19,6 +21,14 @@ class Statement(Node, Protocol):
 
 class Expression(Node, Protocol):
     def expression_node(self) -> None:
+        ...
+
+
+class Object(Protocol):
+    def type(self) -> ObjectType:
+        ...
+
+    def inspect(self) -> str:
         ...
 
 
