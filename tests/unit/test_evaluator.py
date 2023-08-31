@@ -1,9 +1,9 @@
 import pytest
 
-from src.evaluator import eval
+from src.evaluator import NULL, eval
 from src.lexer import Lexer
 from src.libparser import Parser
-from src.object import Boolean, Integer, Object
+from src.object import Boolean, Integer, Null, Object
 
 
 def execute_eval(input: str) -> Object:
@@ -24,6 +24,10 @@ def check_boolean_object(obj: Object, expected: bool):
     assert isinstance(obj, Boolean)
 
     assert obj.value == expected
+
+
+def check_null_object(obj: Object):
+    assert obj == NULL
 
 
 @pytest.mark.parametrize(
@@ -94,3 +98,23 @@ def test_bang_operator(input: str, expected: bool):
 def test_eval_boolean_expression(input: str, expected: bool):
     evaluated = execute_eval(input)
     check_boolean_object(evaluated, expected)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["if (true) { 10 }", 10],
+        ["if (false) { 10 }", None],
+        ["if (1) { 10 }", 10],
+        ["if (1 < 2) { 10 }", 10],
+        ["if (1 > 2) { 10 }", None],
+        ["if (1 > 2) { 10 } else { 20 }", 20],
+        ["if (1 < 2) { 10 } else { 20 }", 10],
+    ],
+)
+def test_if_else_expression(input: str, expected: int | None):
+    evaluated = execute_eval(input)
+    if isinstance(expected, int):
+        check_integer_object(evaluated, expected)
+    else:
+        check_null_object(evaluated)

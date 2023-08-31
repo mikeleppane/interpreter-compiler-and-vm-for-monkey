@@ -1,6 +1,8 @@
 from src.libast import (
+    BlockStatement,
     Boolean,
     ExpressionStatement,
+    IfExpression,
     InfixExpression,
     IntegerLiteral,
     Node,
@@ -40,6 +42,10 @@ def eval(node: Node | None) -> Object:
         left = eval(node.left)
         right = eval(node.right)
         return eval_infix_expression(node.operator, left, right)
+    if isinstance(node, BlockStatement):
+        return eval_statements(node.statements)
+    if isinstance(node, IfExpression):
+        return eval_if_expression(node)
 
     return NULL
 
@@ -115,3 +121,22 @@ def eval_integer_infix_expression(operator: str, left: Integer, right: Integer) 
             return to_native_bool(value=left_val != right_val)
         case _:
             return NULL
+
+
+def eval_if_expression(expr: IfExpression) -> Object:
+    condition = eval(expr.condition)
+    if is_truthy(condition):
+        return eval(expr.consequence)
+    if expr.alternative is not None:
+        return eval(expr.alternative)
+    return NULL
+
+
+def is_truthy(obj: Object) -> bool:
+    if obj == NULL:
+        return False
+    if obj == TRUE:
+        return True
+    if obj == FALSE:
+        return False
+    return True
