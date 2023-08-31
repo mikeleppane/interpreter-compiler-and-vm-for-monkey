@@ -3,6 +3,7 @@ from src.libast import (
     ExpressionStatement,
     IntegerLiteral,
     Node,
+    PrefixExpression,
     Program,
     Statement,
 )
@@ -25,6 +26,9 @@ def eval(node: Node | None) -> Object:
         if node.value:
             return TRUE
         return FALSE
+    if isinstance(node, PrefixExpression):
+        right = eval(node.right)
+        return eval_prefix_expression(node.operator, right)
 
     return NULL
 
@@ -36,3 +40,31 @@ def eval_statements(stmts: list[Statement]) -> Object:
         result = eval(stmt)
 
     return result
+
+
+def eval_prefix_expression(operator: str, right: Object) -> Object:
+    match operator:
+        case "!":
+            return eval_bang_operator_expression(right)
+        case "-":
+            return eval_minus_prefix_operator_expression(right)
+        case _:
+            return NULL
+
+
+def eval_bang_operator_expression(right: Object) -> Object:
+    if right == TRUE:
+        return FALSE
+    if right == FALSE:
+        return TRUE
+    if right == NULL:
+        return TRUE
+    return FALSE
+
+
+def eval_minus_prefix_operator_expression(right: Object) -> Object:
+    if not isinstance(right, Integer):
+        return NULL
+
+    value = right.value
+    return Integer(value=-value)
