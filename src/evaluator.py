@@ -1,6 +1,7 @@
 from src.libast import (
     Boolean,
     ExpressionStatement,
+    InfixExpression,
     IntegerLiteral,
     Node,
     PrefixExpression,
@@ -13,6 +14,12 @@ from src.object import Integer, Null, Object
 NULL = Null()
 TRUE = BooleanObject(value=True)
 FALSE = BooleanObject(value=False)
+
+
+def to_native_bool(value: bool) -> BooleanObject:
+    if value:
+        return TRUE
+    return FALSE
 
 
 def eval(node: Node | None) -> Object:
@@ -29,6 +36,10 @@ def eval(node: Node | None) -> Object:
     if isinstance(node, PrefixExpression):
         right = eval(node.right)
         return eval_prefix_expression(node.operator, right)
+    if isinstance(node, InfixExpression):
+        left = eval(node.left)
+        right = eval(node.right)
+        return eval_infix_expression(node.operator, left, right)
 
     return NULL
 
@@ -68,3 +79,39 @@ def eval_minus_prefix_operator_expression(right: Object) -> Object:
 
     value = right.value
     return Integer(value=-value)
+
+
+def eval_infix_expression(operator: str, left: Object, right: Object) -> Object:
+    if isinstance(left, Integer) and isinstance(right, Integer):
+        return eval_integer_infix_expression(operator, left, right)
+    match operator:
+        case "==":
+            return to_native_bool(value=left.value == right.value)  # type: ignore
+        case "!=":
+            return to_native_bool(value=left.value != right.value)  # type: ignore
+    return NULL
+
+
+def eval_integer_infix_expression(operator: str, left: Integer, right: Integer) -> Object:
+    left_val = left.value
+    right_val = right.value
+
+    match operator:
+        case "+":
+            return Integer(value=left_val + right_val)
+        case "-":
+            return Integer(value=left_val - right_val)
+        case "*":
+            return Integer(value=left_val * right_val)
+        case "/":
+            return Integer(value=left_val // right_val)
+        case "<":
+            return to_native_bool(value=left_val < right_val)
+        case ">":
+            return to_native_bool(value=left_val > right_val)
+        case "==":
+            return to_native_bool(value=left_val == right_val)
+        case "!=":
+            return to_native_bool(value=left_val != right_val)
+        case _:
+            return NULL
