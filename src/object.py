@@ -9,6 +9,7 @@ class OBJECT_TYPE(StrEnum):
     INTEGER = "INTEGER"
     BOOLEAN = "BOOLEAN"
     NULL = "NULL"
+    RETURN_VALUE_OBJ = "RETURN_VALUE_OBJ"
 
 
 class Object(Protocol):
@@ -48,3 +49,14 @@ class Null(Object):
 
     def inspect(self) -> str:
         return "null"
+
+
+@dataclass
+class ReturnValue(Object):
+    value: Object
+
+    def type(self) -> ObjectType:
+        return OBJECT_TYPE.RETURN_VALUE_OBJ
+
+    def inspect(self) -> str:
+        return self.value.inspect()

@@ -118,3 +118,32 @@ def test_if_else_expression(input: str, expected: int | None):
         check_integer_object(evaluated, expected)
     else:
         check_null_object(evaluated)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["return 10;", 10],
+        ["return 10; 9;", 10],
+        ["return 2 * 5; 9;", 10],
+        ["9; return 2 * 5; 9;", 10],
+        [
+            """
+            if (10 > 1) {
+                if (10 > 1) {
+                    return 10;
+                }
+                return 1;
+            }
+            """,
+            10,
+        ],
+    ],
+)
+def test_return_statements(input: str, expected: int | None):
+    evaluated = execute_eval(input)
+    print(evaluated)
+    if isinstance(expected, int):
+        check_integer_object(evaluated, expected)
+    else:
+        check_null_object(evaluated)

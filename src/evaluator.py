@@ -8,10 +8,11 @@ from src.libast import (
     Node,
     PrefixExpression,
     Program,
-    Statement,
+    ReturnStatement,
 )
+from src.object import OBJECT_TYPE
 from src.object import Boolean as BooleanObject
-from src.object import Integer, Null, Object
+from src.object import Integer, Null, Object, ReturnValue
 
 NULL = Null()
 TRUE = BooleanObject(value=True)
@@ -26,7 +27,7 @@ def to_native_bool(value: bool) -> BooleanObject:
 
 def eval(node: Node | None) -> Object:
     if isinstance(node, Program):
-        return eval_statements(node.statements)
+        return eval_program(node)
     if isinstance(node, ExpressionStatement):
         return eval(node.expression)
     if isinstance(node, IntegerLiteral):
@@ -43,18 +44,33 @@ def eval(node: Node | None) -> Object:
         right = eval(node.right)
         return eval_infix_expression(node.operator, left, right)
     if isinstance(node, BlockStatement):
-        return eval_statements(node.statements)
+        return eval_block_statement(node)
     if isinstance(node, IfExpression):
         return eval_if_expression(node)
+    if isinstance(node, ReturnStatement):
+        return ReturnValue(value=eval(node.return_value))
 
     return NULL
 
 
-def eval_statements(stmts: list[Statement]) -> Object:
+def eval_program(program: Program) -> Object:
     result: Object = NULL
 
-    for stmt in stmts:
+    for stmt in program.statements:
         result = eval(stmt)
+        if isinstance(result, ReturnValue):
+            return result.value
+
+    return result
+
+
+def eval_block_statement(block: BlockStatement) -> Object:
+    result: Object = NULL
+
+    for stmt in block.statements:
+        result = eval(stmt)
+        if result != NULL and result.type() == OBJECT_TYPE.RETURN_VALUE_OBJ:
+            return result
 
     return result
 
