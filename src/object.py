@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Protocol, TypeAlias
+from typing import Protocol, Self, TypeAlias
 
 ObjectType: TypeAlias = str
 
@@ -10,6 +10,7 @@ class OBJECT_TYPE(StrEnum):
     BOOLEAN = "BOOLEAN"
     NULL = "NULL"
     RETURN_VALUE_OBJ = "RETURN_VALUE_OBJ"
+    ERROR_OBJ = "ERROR_OBJ"
 
 
 class Object(Protocol):
@@ -60,3 +61,18 @@ class ReturnValue(Object):
 
     def inspect(self) -> str:
         return self.value.inspect()
+
+
+@dataclass
+class Error(Object):
+    message: str
+
+    def type(self) -> ObjectType:
+        return OBJECT_TYPE.ERROR_OBJ
+
+    def inspect(self) -> str:
+        return f"ERROR: {self.message}"
+
+    @classmethod
+    def build_error(cls, format: str) -> Self:
+        return cls(message=format)

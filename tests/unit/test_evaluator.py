@@ -3,7 +3,7 @@ import pytest
 from src.evaluator import NULL, eval
 from src.lexer import Lexer
 from src.libparser import Parser
-from src.object import Boolean, Integer, Null, Object
+from src.object import Boolean, Error, Integer, Object
 
 
 def execute_eval(input: str) -> Object:
@@ -147,3 +147,50 @@ def test_return_statements(input: str, expected: int | None):
         check_integer_object(evaluated, expected)
     else:
         check_null_object(evaluated)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        [
+            "5 + true;",
+            "type mismatch: INTEGER + BOOLEAN",
+        ],
+        [
+            "5 + true; 5;",
+            "type mismatch: INTEGER + BOOLEAN",
+        ],
+        [
+            "-true",
+            "unknown operator: -BOOLEAN",
+        ],
+        [
+            "true + false;",
+            "unknown operator: BOOLEAN + BOOLEAN",
+        ],
+        [
+            "5; true + false; 5",
+            "unknown operator: BOOLEAN + BOOLEAN",
+        ],
+        [
+            "if (10 > 1) { true + false; }",
+            "unknown operator: BOOLEAN + BOOLEAN",
+        ],
+        [
+            """
+            if (10 > 1) {
+                if (10 > 1) {
+                    return true + false;
+                }
+                return 1;
+            }
+            """,
+            "unknown operator: BOOLEAN + BOOLEAN",
+        ],
+    ],
+)
+def test_error_handling(input: str, expected: str):
+    evaluated = execute_eval(input)
+    assert isinstance(evaluated, Error)
+
+    assert evaluated.message == expected
