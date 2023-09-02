@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Protocol, Self, TypeAlias
 
@@ -76,3 +76,15 @@ class Error(Object):
     @classmethod
     def build_error(cls, format: str) -> Self:
         return cls(message=format)
+
+
+@dataclass
+class Environment:
+    store: dict[str, Object] = field(default_factory=dict)
+
+    def __getitem__(self, name: str) -> Object | None:
+        return self.store.get(name)
+
+    def __setitem__(self, name: str, value: Object) -> Object:
+        self.store[name] = value
+        return value

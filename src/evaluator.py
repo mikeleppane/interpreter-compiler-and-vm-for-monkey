@@ -2,9 +2,11 @@ from src.libast import (
     BlockStatement,
     Boolean,
     ExpressionStatement,
+    Identifier,
     IfExpression,
     InfixExpression,
     IntegerLiteral,
+    LetStatement,
     Node,
     PrefixExpression,
     Program,
@@ -12,7 +14,7 @@ from src.libast import (
 )
 from src.object import OBJECT_TYPE
 from src.object import Boolean as BooleanObject
-from src.object import Error, Integer, Null, Object, ReturnValue
+from src.object import Environment, Error, Integer, Null, Object, ReturnValue
 
 NULL = Null()
 TRUE = BooleanObject(value=True)
@@ -25,11 +27,11 @@ def to_native_bool(value: bool) -> BooleanObject:
     return FALSE
 
 
-def eval(node: Node | None) -> Object:  # noqa: C901
+def eval(node: Node | None, env: Environment) -> Object:  # noqa: C901
     if isinstance(node, Program):
-        return eval_program(node)
+        return eval_program(node, env)
     if isinstance(node, ExpressionStatement):
-        return eval(node.expression)
+        return eval(node.expression, env)
     if isinstance(node, IntegerLiteral):
         return Integer(value=node.value)
     if isinstance(node, Boolean):
@@ -37,32 +39,47 @@ def eval(node: Node | None) -> Object:  # noqa: C901
             return TRUE
         return FALSE
     if isinstance(node, PrefixExpression):
-        right = eval(node.right)
+        right = eval(node.right, env)
         if is_error(right):
             return right
         return eval_prefix_expression(node.operator, right)
     if isinstance(node, InfixExpression):
-        left = eval(node.left)
-        right = eval(node.right)
+        left = eval(node.left, env)
+        right = eval(node.right, env)
         if is_error(left):
             return left
         if is_error(right):
             return right
         return eval_infix_expression(node.operator, left, right)
     if isinstance(node, BlockStatement):
-        return eval_block_statement(node)
+        return eval_block_statement(node, env)
     if isinstance(node, IfExpression):
-        condition = eval(node.condition)
+        condition = eval(node.condition, env)
         if is_error(condition):
             return condition
-        return eval_if_expression(node)
+        return eval_if_expression(node, env)
     if isinstance(node, ReturnStatement):
-        val = eval(node.return_value)
+        val = eval(node.return_value, env)
         if is_error(val):
             return val
         return ReturnValue(value=val)
+    if isinstance(node, LetStatement):
+        val = eval(node.value, env)
+        if is_error(val):
+            return val
+        env[node.name.value] = val
+    if isinstance(node, Identifier):
+        return eval_identifier(node, env)
 
     return NULL
+
+
+def eval_identifier(node: Identifier, env: Environment) -> Object:
+    value = env[node.value]
+    if value is not None:
+        return value
+
+    return Error(message=f"identifier not found: {node.value}")
 
 
 def is_error(obj: Object | None) -> bool:
@@ -71,11 +88,11 @@ def is_error(obj: Object | None) -> bool:
     return False
 
 
-def eval_program(program: Program) -> Object:
+def eval_program(program: Program, env: Environment) -> Object:
     result: Object = NULL
 
     for stmt in program.statements:
-        result = eval(stmt)
+        result = eval(stmt, env)
         if isinstance(result, ReturnValue):
             return result.value
         if isinstance(result, Error):
@@ -84,11 +101,11 @@ def eval_program(program: Program) -> Object:
     return result
 
 
-def eval_block_statement(block: BlockStatement) -> Object:
+def eval_block_statement(block: BlockStatement, env: Environment) -> Object:
     result: Object = NULL
 
     for stmt in block.statements:
-        result = eval(stmt)
+        result = eval(stmt, env)
         if result != NULL:
             rt = result.type()
             if rt == OBJECT_TYPE.RETURN_VALUE_OBJ or rt == OBJECT_TYPE.ERROR_OBJ:
@@ -166,12 +183,12 @@ def eval_integer_infix_expression(operator: str, left: Integer, right: Integer) 
             return Error(message=f"unknown operator: {left.type()} {operator} {right.type()}")
 
 
-def eval_if_expression(expr: IfExpression) -> Object:
-    condition = eval(expr.condition)
+def eval_if_expression(expr: IfExpression, env: Environment) -> Object:
+    condition = eval(expr.condition, env)
     if is_truthy(condition):
-        return eval(expr.consequence)
+        return eval(expr.consequence, env)
     if expr.alternative is not None:
-        return eval(expr.alternative)
+        return eval(expr.alternative, env)
     return NULL
 
 

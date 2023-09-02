@@ -3,15 +3,16 @@ import pytest
 from src.evaluator import NULL, eval
 from src.lexer import Lexer
 from src.libparser import Parser
-from src.object import Boolean, Error, Integer, Object
+from src.object import Boolean, Environment, Error, Integer, Object
 
 
 def execute_eval(input: str) -> Object:
     lexer = Lexer(input)
     parser = Parser(lexer=lexer)
+    env = Environment()
     program = parser.parse_program()
 
-    return eval(program)
+    return eval(program, env)
 
 
 def check_integer_object(obj: Object, expected: int):
@@ -187,6 +188,7 @@ def test_return_statements(input: str, expected: int | None):
             """,
             "unknown operator: BOOLEAN + BOOLEAN",
         ],
+        ["foobar", "identifier not found: foobar"],
     ],
 )
 def test_error_handling(input: str, expected: str):
@@ -194,3 +196,17 @@ def test_error_handling(input: str, expected: str):
     assert isinstance(evaluated, Error)
 
     assert evaluated.message == expected
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["let a = 5; a;", 5],
+        ["let a = 5 * 5; a;", 25],
+        ["let a = 5; let b = a; b;", 5],
+        ["let a = 5; let b = a; let c = a + b + 5; c;", 15],
+    ],
+)
+def test_let_statements(input: str, expected: int):
+    evaluated = execute_eval(input)
+    check_integer_object(evaluated, expected)
