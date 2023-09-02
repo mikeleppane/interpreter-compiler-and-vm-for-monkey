@@ -3,10 +3,12 @@ import getpass
 from src.evaluator import eval
 from src.lexer import Lexer
 from src.libparser import Parser
+from src.object import Environment, Null
 
 
 class Repl:
     def run(self) -> None:
+        env = Environment()
         while True:
             print(">> ", end="")
             line = input()
@@ -18,8 +20,9 @@ class Repl:
             if len(parser.errors) > 0:
                 self.print_parser_errors(parser.errors)
                 continue
-            evaluated = eval(program)
-            print(evaluated.inspect())
+            evaluated = eval(program, env)
+            if not isinstance(evaluated, Null):
+                print(evaluated.inspect())
 
     def print_parser_errors(self, errors: list[str]) -> None:
         print("🐒")
