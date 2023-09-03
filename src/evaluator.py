@@ -1,7 +1,10 @@
 from src.libast import (
     BlockStatement,
     Boolean,
+    CallExpression,
+    Expression,
     ExpressionStatement,
+    FunctionLiteral,
     Identifier,
     IfExpression,
     InfixExpression,
@@ -14,7 +17,7 @@ from src.libast import (
 )
 from src.object import OBJECT_TYPE
 from src.object import Boolean as BooleanObject
-from src.object import Environment, Error, Integer, Null, Object, ReturnValue
+from src.object import Environment, Error, Function, Integer, Null, Object, ReturnValue
 
 NULL = Null()
 TRUE = BooleanObject(value=True)
@@ -70,8 +73,51 @@ def eval(node: Node | None, env: Environment) -> Object:  # noqa: C901
         env[node.name.value] = val
     if isinstance(node, Identifier):
         return eval_identifier(node, env)
+    if isinstance(node, FunctionLiteral):
+        params = node.parameters
+        body = node.body
+        return Function(parameters=params, body=body, env=env)
+    if isinstance(node, CallExpression):
+        func = eval(node.function, env)
+        if is_error(func):
+            return func
+        args = eval_expressions(node.arguments, env)
+        if len(args) == 1 and is_error(args[0]):
+            return args[0]
+        return apply_function(func, args)
 
     return NULL
+
+
+def apply_function(func: Object, args: list[Object]) -> Object:
+    if not isinstance(func, Function):
+        return Error(message=f"not a function: {func.type()}")
+    extented_env = extend_function_env(func, args)
+    evaluated = eval(func.body, extented_env)
+    return unwrap_return_value(evaluated)
+
+
+def unwrap_return_value(obj: Object) -> Object:
+    if isinstance(obj, ReturnValue):
+        return obj.value
+    return obj
+
+
+def extend_function_env(func: Function, args: list[Object]) -> Environment:
+    env = Environment.create_enclosed_env(outer=func.env)
+    for index, param in enumerate(func.parameters):
+        env[param.value] = args[index]
+    return env
+
+
+def eval_expressions(exprs: list[Expression], env: Environment) -> list[Object]:
+    result: list[Object] = []
+    for expr in exprs:
+        evaluated = eval(expr, env)
+        if is_error(evaluated):
+            return [evaluated]
+        result.append(evaluated)
+    return result
 
 
 def eval_identifier(node: Identifier, env: Environment) -> Object:

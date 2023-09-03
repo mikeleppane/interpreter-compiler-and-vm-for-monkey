@@ -3,7 +3,7 @@ import pytest
 from src.evaluator import NULL, eval
 from src.lexer import Lexer
 from src.libparser import Parser
-from src.object import Boolean, Environment, Error, Integer, Object
+from src.object import Boolean, Environment, Error, Function, Integer, Object
 
 
 def execute_eval(input: str) -> Object:
@@ -210,3 +210,57 @@ def test_error_handling(input: str, expected: str):
 def test_let_statements(input: str, expected: int):
     evaluated = execute_eval(input)
     check_integer_object(evaluated, expected)
+
+
+def test_function_object():
+    input = "fn(x) { x + 2; };"
+    evaluated = execute_eval(input)
+
+    assert isinstance(evaluated, Function)
+
+    assert len(evaluated.parameters) == 1
+
+    assert evaluated.parameters[0].value == "x"
+
+    expected_body = "(x + 2)"
+
+    assert evaluated.body.to_string() == expected_body
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["let identity = fn(x) { x; }; identity(5);", 5],
+        ["let identity = fn(x) { return x; }; identity(5);", 5],
+        ["let double = fn(x) { x * 2; }; double(5);", 10],
+        ["let add = fn(x, y) { x + y; }; add(5, 5);", 10],
+        ["let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20],
+        ["fn(x) { x; }(5)", 5],
+    ],
+)
+def test_function_application(input: str, expected: int):
+    evaluated = execute_eval(input)
+    check_integer_object(evaluated, expected)
+
+
+def test_closures():
+    input = """
+        let newAdder = fn(x) {
+            fn(y) { x + y };
+        };
+        let addTwo = newAdder(2);
+        addTwo(2);
+    """
+    evaluated = execute_eval(input)
+    check_integer_object(evaluated, 4)
+
+
+def test_function_as_argument():
+    input = """
+        let add = fn(a, b) { a + b };
+        let sub = fn(a, b) { a - b };
+        let applyFunc = fn(a, b, func) { func(a, b) };
+        applyFunc(2, 2, add);
+    """
+    evaluated = execute_eval(input)
+    check_integer_object(evaluated, 4)
