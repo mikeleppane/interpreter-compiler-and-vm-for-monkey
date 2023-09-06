@@ -13,6 +13,7 @@ from src.libast import (
     LetStatement,
     PrefixExpression,
     ReturnStatement,
+    StringLiteral,
 )
 from src.libparser import Parser
 
@@ -507,3 +508,20 @@ def test_call_expression_parsing():
         assert statement.expression.arguments[2].left.token_literal() == "4"
         assert statement.expression.arguments[2].operator == "+"
         assert statement.expression.arguments[2].right.token_literal() == "5"
+
+
+def test_string_literal_expression():
+    lexer = Lexer('"hello world"')
+
+    parser = Parser(lexer=lexer)
+    program = parser.parse_program()
+
+    assert len(program.statements) == 1
+    check_parser_errors(parser=parser)
+
+    for statement in program.statements:
+        assert isinstance(statement, ExpressionStatement)
+
+        assert isinstance(statement.expression, StringLiteral)
+
+        assert statement.expression.value == "hello world"

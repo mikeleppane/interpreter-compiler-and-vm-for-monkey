@@ -216,7 +216,7 @@ class FunctionLiteral(Expression):
 
 
 @dataclass
-class CallExpression:
+class CallExpression(Expression):
     token: Token
     function: Expression
     arguments: list[Expression]
@@ -230,3 +230,18 @@ class CallExpression:
     def to_string(self) -> str:
         args = ", ".join(a.to_string() for a in self.arguments)
         return f"{self.function.to_string()}({args})"
+
+
+@dataclass
+class StringLiteral(Expression):
+    token: Token
+    value: str
+
+    def expression_node(self) -> None:
+        ...
+
+    def token_literal(self) -> str:
+        return self.token.literal
+
+    def to_string(self) -> str:
+        return self.token.literal

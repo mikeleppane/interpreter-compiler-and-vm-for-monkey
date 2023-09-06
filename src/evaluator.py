@@ -14,10 +14,22 @@ from src.libast import (
     PrefixExpression,
     Program,
     ReturnStatement,
+    StringLiteral,
 )
+from src.libbuiltins import builtins
 from src.object import OBJECT_TYPE
 from src.object import Boolean as BooleanObject
-from src.object import Environment, Error, Function, Integer, Null, Object, ReturnValue
+from src.object import (
+    Builtin,
+    Environment,
+    Error,
+    Function,
+    Integer,
+    Null,
+    Object,
+    ReturnValue,
+    String,
+)
 
 NULL = Null()
 TRUE = BooleanObject(value=True)
@@ -85,16 +97,20 @@ def eval(node: Node | None, env: Environment) -> Object:  # noqa: C901
         if len(args) == 1 and is_error(args[0]):
             return args[0]
         return apply_function(func, args)
+    if isinstance(node, StringLiteral):
+        return String(value=node.value)
 
     return NULL
 
 
 def apply_function(func: Object, args: list[Object]) -> Object:
-    if not isinstance(func, Function):
-        return Error(message=f"not a function: {func.type()}")
-    extented_env = extend_function_env(func, args)
-    evaluated = eval(func.body, extented_env)
-    return unwrap_return_value(evaluated)
+    if isinstance(func, Function):
+        extented_env = extend_function_env(func, args)
+        evaluated = eval(func.body, extented_env)
+        return unwrap_return_value(evaluated)
+    if isinstance(func, Builtin):
+        return func.fn(*args)
+    return Error(message=f"not a function or builtin: {func.type()}")
 
 
 def unwrap_return_value(obj: Object) -> Object:
@@ -124,6 +140,9 @@ def eval_identifier(node: Identifier, env: Environment) -> Object:
     value = env[node.value]
     if value is not None:
         return value
+    builtin = builtins.get(node.value)
+    if builtin is not None:
+        return builtin
 
     return Error(message=f"identifier not found: {node.value}")
 
@@ -199,8 +218,21 @@ def eval_infix_expression(operator: str, left: Object, right: Object) -> Object:
         case "!=":
             return to_native_bool(value=left.value != right.value)  # type: ignore
         case _:
+            if isinstance(left, String) and isinstance(right, String):
+                return eval_string_infix_expression(operator, left, right)
             if left.type() != right.type():
                 return Error(message=f"type mismatch: {left.type()} {operator} {right.type()}")
+            return Error(message=f"unknown operator: {left.type()} {operator} {right.type()}")
+
+
+def eval_string_infix_expression(operator: str, left: String, right: String) -> Object:
+    left_val = left.value
+    right_val = right.value
+
+    match operator:
+        case "+":
+            return String(value=left_val + right_val)
+        case _:
             return Error(message=f"unknown operator: {left.type()} {operator} {right.type()}")
 
 

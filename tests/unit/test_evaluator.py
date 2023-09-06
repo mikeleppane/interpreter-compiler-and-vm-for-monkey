@@ -3,7 +3,7 @@ import pytest
 from src.evaluator import NULL, eval
 from src.lexer import Lexer
 from src.libparser import Parser
-from src.object import Boolean, Environment, Error, Function, Integer, Object
+from src.object import Boolean, Environment, Error, Function, Integer, Object, String
 
 
 def execute_eval(input: str) -> Object:
@@ -17,6 +17,12 @@ def execute_eval(input: str) -> Object:
 
 def check_integer_object(obj: Object, expected: int):
     assert isinstance(obj, Integer)
+
+    assert obj.value == expected
+
+
+def check_string_object(obj: Object, expected: str):
+    assert isinstance(obj, String)
 
     assert obj.value == expected
 
@@ -189,6 +195,7 @@ def test_return_statements(input: str, expected: int | None):
             "unknown operator: BOOLEAN + BOOLEAN",
         ],
         ["foobar", "identifier not found: foobar"],
+        ['"Hello" - "World"', "unknown operator: STRING - STRING"],
     ],
 )
 def test_error_handling(input: str, expected: str):
@@ -264,3 +271,36 @@ def test_function_as_argument():
     """
     evaluated = execute_eval(input)
     check_integer_object(evaluated, 4)
+
+
+def test_string_literal():
+    input = '"Hello World!"'
+
+    evaluated = execute_eval(input)
+    check_string_object(evaluated, "Hello World!")
+
+
+def test_string_concatenation():
+    input = '"Hello" + " " + "World!"'
+
+    evaluated = execute_eval(input)
+    check_string_object(evaluated, "Hello World!")
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ['len("")', 0],
+        ['len("four")', 4],
+        ['len("hello world")', 11],
+        ["len(1)", "argument to 'len' not supported, got INTEGER"],
+        ['len("one", "two")', "wrong number of arguments. got=2, want=1"],
+    ],
+)
+def test_builtin_functions(input: str, expected: int | str):
+    evaluated = execute_eval(input)
+    if isinstance(expected, int):
+        check_integer_object(evaluated, expected)
+    if isinstance(expected, str):
+        assert isinstance(evaluated, Error)
+        assert evaluated.message == expected

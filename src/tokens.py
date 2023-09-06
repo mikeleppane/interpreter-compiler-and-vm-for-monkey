@@ -30,6 +30,7 @@ class TokenType(StrEnum):
     GT = ">"
     EQ = "=="
     NOT_EQ = "!="
+    STRING = "STRING"
 
 
 @dataclass

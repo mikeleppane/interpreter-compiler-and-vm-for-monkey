@@ -11,9 +11,11 @@ class OBJECT_TYPE(StrEnum):
     INTEGER = "INTEGER"
     BOOLEAN = "BOOLEAN"
     NULL = "NULL"
-    RETURN_VALUE_OBJ = "RETURN_VALUE_OBJ"
-    ERROR_OBJ = "ERROR_OBJ"
-    FUNCTION_OBJ = "FUNCTION_OBJ"
+    RETURN_VALUE_OBJ = "RETURN_VALUE"
+    ERROR_OBJ = "ERROR"
+    FUNCTION_OBJ = "FUNCTION"
+    STRING_OBJ = "STRING"
+    BUILTIN_OBJ = "BUILTIN"
 
 
 class Object(Protocol):
@@ -33,6 +35,14 @@ class Integer(Object):
 
     def inspect(self) -> str:
         return str(self.value)
+
+
+class BuiltinFunction(Protocol):
+    def __call__(
+        self,
+        *args: Object,
+    ) -> Object:
+        ...
 
 
 @dataclass
@@ -115,3 +125,25 @@ class Function(Object):
     def inspect(self) -> str:
         params = [p.to_string() for p in self.parameters]
         return f"fn({', '.join(params)}) {{\n{self.body.to_string()}\n}}"
+
+
+@dataclass
+class String(Object):
+    value: str
+
+    def type(self) -> ObjectType:
+        return OBJECT_TYPE.STRING_OBJ
+
+    def inspect(self) -> str:
+        return self.value
+
+
+@dataclass
+class Builtin(Object):
+    fn: BuiltinFunction
+
+    def type(self) -> ObjectType:
+        return OBJECT_TYPE.BUILTIN_OBJ
+
+    def inspect(self) -> str:
+        return "builtin function"
