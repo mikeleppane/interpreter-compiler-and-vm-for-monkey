@@ -22,7 +22,7 @@ class Expression(Node, Protocol):
         ...
 
 
-@dataclass
+@dataclass(frozen=True)
 class Program(Node):
     statements: list[Statement] = field(default_factory=list)
 
@@ -35,7 +35,7 @@ class Program(Node):
         return "".join(stm.to_string() for stm in self.statements)
 
 
-@dataclass
+@dataclass(frozen=True)
 class Identifier(Expression):
     token: Token
     value: str
@@ -50,7 +50,7 @@ class Identifier(Expression):
         return self.value
 
 
-@dataclass
+@dataclass(frozen=True)
 class LetStatement(Statement):
     token: Token
     name: Identifier
@@ -66,7 +66,7 @@ class LetStatement(Statement):
         return f"{self.token_literal()} {self.name.to_string()} = {self.value.to_string() if self.value else ''};"
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReturnStatement(Statement):
     token: Token
     return_value: Expression | None = None
@@ -83,7 +83,7 @@ class ReturnStatement(Statement):
         )
 
 
-@dataclass
+@dataclass(frozen=True)
 class ExpressionStatement(Statement):
     token: Token
     expression: Expression | None = None
@@ -100,7 +100,7 @@ class ExpressionStatement(Statement):
         return ""
 
 
-@dataclass
+@dataclass(frozen=True)
 class IntegerLiteral(Expression):
     token: Token
     value: int
@@ -115,7 +115,7 @@ class IntegerLiteral(Expression):
         return self.token.literal
 
 
-@dataclass
+@dataclass(frozen=True)
 class PrefixExpression(Expression):
     token: Token
     operator: str
@@ -131,7 +131,7 @@ class PrefixExpression(Expression):
         return f"({self.operator}{self.right.to_string()})"
 
 
-@dataclass
+@dataclass(frozen=True)
 class InfixExpression(Expression):
     token: Token
     left: Expression
@@ -148,7 +148,7 @@ class InfixExpression(Expression):
         return f"({self.left.to_string()} {self.operator} {self.right.to_string()})"
 
 
-@dataclass
+@dataclass(frozen=True)
 class Boolean(Expression):
     token: Token
     value: bool
@@ -163,7 +163,7 @@ class Boolean(Expression):
         return self.token.literal
 
 
-@dataclass
+@dataclass(frozen=True)
 class BlockStatement(Statement):
     token: Token
     statements: list[Statement] = field(default_factory=list)
@@ -178,7 +178,7 @@ class BlockStatement(Statement):
         return "".join(stm.to_string() for stm in self.statements)
 
 
-@dataclass
+@dataclass(frozen=True)
 class IfExpression(Expression):
     token: Token
     condition: Expression
@@ -198,7 +198,7 @@ class IfExpression(Expression):
         return out
 
 
-@dataclass
+@dataclass(frozen=True)
 class FunctionLiteral(Expression):
     token: Token
     parameters: list[Identifier]
@@ -215,7 +215,7 @@ class FunctionLiteral(Expression):
         return f"{self.token_literal()}({params}) {self.body.to_string()}"
 
 
-@dataclass
+@dataclass(frozen=True)
 class CallExpression(Expression):
     token: Token
     function: Expression
@@ -232,7 +232,7 @@ class CallExpression(Expression):
         return f"{self.function.to_string()}({args})"
 
 
-@dataclass
+@dataclass(frozen=True)
 class StringLiteral(Expression):
     token: Token
     value: str
@@ -247,7 +247,7 @@ class StringLiteral(Expression):
         return self.token.literal
 
 
-@dataclass
+@dataclass(frozen=True)
 class ArrayLiteral(Expression):
     token: Token
     elements: list[Expression]
@@ -263,7 +263,7 @@ class ArrayLiteral(Expression):
         return f"[{elements}]"
 
 
-@dataclass
+@dataclass(frozen=True)
 class IndexExpression(Expression):
     token: Token
     left: Expression
@@ -277,3 +277,19 @@ class IndexExpression(Expression):
 
     def to_string(self) -> str:
         return f"({self.left.to_string()}[{self.index.to_string()}])"
+
+
+@dataclass(frozen=True)
+class HashLiteral(Expression):
+    token: Token
+    pairs: dict[Expression, Expression]
+
+    def expression_node(self) -> None:
+        ...
+
+    def token_literal(self) -> str:
+        return self.token.literal
+
+    def to_string(self) -> str:
+        pairs = ", ".join(f"{k.to_string()}: {v.to_string()}" for k, v in self.pairs.items())
+        return f"{{{pairs}}}"

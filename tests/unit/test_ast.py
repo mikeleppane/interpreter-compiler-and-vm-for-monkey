@@ -1,4 +1,4 @@
-from libast import Identifier, LetStatement, Program, Statement
+from libast import FunctionLiteral, Identifier, LetStatement, Program, Statement
 from tokens import Token, TokenType
 
 

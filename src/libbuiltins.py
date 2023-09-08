@@ -61,10 +61,17 @@ def push_builtin(*args: Object) -> Object:
         return Null()
 
 
+def puts_builtin(*args: Object) -> Object:
+    for arg in args:
+        print(arg.inspect())
+    return Null()
+
+
 builtins: dict[str, Builtin] = {
     "len": Builtin(fn=len_builtin),
     "first": Builtin(fn=first_builtin),
     "last": Builtin(fn=last_builtin),
     "rest": Builtin(fn=rest_builtin),
     "push": Builtin(fn=push_builtin),
+    "puts": Builtin(fn=puts_builtin),
 }

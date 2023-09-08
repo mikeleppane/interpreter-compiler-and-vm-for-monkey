@@ -1,3 +1,5 @@
+from typing import Hashable
+
 import pytest
 
 from src.lexer import Lexer
@@ -7,6 +9,7 @@ from src.libast import (
     CallExpression,
     ExpressionStatement,
     FunctionLiteral,
+    HashLiteral,
     Identifier,
     IfExpression,
     IndexExpression,
@@ -478,6 +481,8 @@ def test_function_parameter_parsing(input: str, expected_params: list[str]):
 
     assert isinstance(program.statements[0].expression, FunctionLiteral)
 
+    print(isinstance(program.statements[0].expression, Hashable))
+
     assert len(program.statements[0].expression.parameters) == len(expected_params)
 
     for i, param in enumerate(expected_params):
@@ -598,3 +603,71 @@ def test_parsing_index_expressions():
         assert statement.expression.index.operator == "+"
 
         assert statement.expression.index.right.value == 1
+
+
+def test_parsing_hash_literals():
+    input = '{"one": 1, "two": 2, "three": 3}'
+
+    lexer = Lexer(input)
+    parser = Parser(lexer=lexer)
+    program = parser.parse_program()
+
+    assert len(program.statements) == 1
+    check_parser_errors(parser=parser)
+
+    for statement in program.statements:
+        assert isinstance(statement, ExpressionStatement)
+
+        assert isinstance(statement.expression, HashLiteral)
+
+        assert len(statement.expression.pairs) == 3
+
+        expected = {"one": 1, "two": 2, "three": 3}
+
+        for key, value in statement.expression.pairs.items():
+            assert isinstance(key, StringLiteral)
+
+            assert key.value in expected
+
+            assert expected[key.value] == value.value
+
+
+def test_parsing_empty_hash_literal():
+    input = "{}"
+
+    lexer = Lexer(input)
+    parser = Parser(lexer=lexer)
+    program = parser.parse_program()
+
+    assert len(program.statements) == 1
+    check_parser_errors(parser=parser)
+
+    for statement in program.statements:
+        assert isinstance(statement, ExpressionStatement)
+
+        assert isinstance(statement.expression, HashLiteral)
+
+        assert len(statement.expression.pairs) == 0
+
+
+def test_parsing_hash_literals_with_expressions():
+    input = '{"one": 0 + 1, "two": 10 - 8, "three": 15 / 5}'
+
+    lexer = Lexer(input)
+    parser = Parser(lexer=lexer)
+    program = parser.parse_program()
+
+    assert len(program.statements) == 1
+    check_parser_errors(parser=parser)
+
+    for statement in program.statements:
+        assert isinstance(statement, ExpressionStatement)
+
+        assert isinstance(statement.expression, HashLiteral)
+
+        assert len(statement.expression.pairs) == 3
+
+        for key, value in statement.expression.pairs.items():
+            assert isinstance(key, StringLiteral)
+
+            assert isinstance(value, InfixExpression)

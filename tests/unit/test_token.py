@@ -48,6 +48,7 @@ def test_next_token_with_simple_code():
     "foobar"
     "foo bar"
     [1, 2];
+    {"foo": "bar"}
 """
     expected_tokens = [
         (TokenType.LET, "let"),
@@ -131,6 +132,11 @@ def test_next_token_with_simple_code():
         (TokenType.INT, "2"),
         (TokenType.RBRACKET, "]"),
         (TokenType.SEMICOLON, ";"),
+        (TokenType.LBRACE, "{"),
+        (TokenType.STRING, "foo"),
+        (TokenType.COLON, ":"),
+        (TokenType.STRING, "bar"),
+        (TokenType.RBRACE, "}"),
         (TokenType.EOF, ""),
     ]
     lexer = Lexer(input)

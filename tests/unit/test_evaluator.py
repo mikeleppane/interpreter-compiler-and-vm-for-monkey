@@ -9,6 +9,8 @@ from src.object import (
     Environment,
     Error,
     Function,
+    Hash,
+    HashPair,
     Integer,
     Null,
     Object,
@@ -206,6 +208,10 @@ def test_return_statements(input: str, expected: int | None):
         ],
         ["foobar", "identifier not found: foobar"],
         ['"Hello" - "World"', "unknown operator: STRING - STRING"],
+        [
+            '{"name": "Monkey"}[fn(x) { x }];',
+            "unusable as hash key: FUNCTION",
+        ],
     ],
 )
 def test_error_handling(input: str, expected: str):
@@ -401,6 +407,18 @@ def test_push_builtin_functions(input: str, expected: list | str):
         assert evaluated.message == expected
 
 
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ['puts("Hello!")', "Hello!"],
+    ],
+)
+def test_puts_builtin_functions(input: str, expected: list | str):
+    evaluated = execute_eval(input)
+    if isinstance(expected, str):
+        assert isinstance(evaluated, Null)
+
+
 def test_array_literals():
     input = "[1, 2 * 2, 3 + 3]"
 
@@ -483,3 +501,64 @@ def test_reduce_function():
     evaluated = execute_eval(input)
     assert isinstance(evaluated, Integer)
     assert evaluated.value == 15
+
+
+def test_hash_literals():
+    input = """
+        let two = "two";
+        {
+            "one": 10 - 9,
+            two: 1 + 1,
+            "thr" + "ee": 6 / 2,
+            4: 4,
+            true: 5,
+            false: 6
+        }
+"""
+    evaluated = execute_eval(input)
+    assert isinstance(evaluated, Hash)
+
+    expected = {
+        String("one"): 1,
+        String("two"): 2,
+        String("three"): 3,
+        Integer(4): 4,
+        Boolean(True): 5,
+        Boolean(False): 6,
+    }
+
+    assert len(evaluated.pairs) == len(expected)
+    for expected_key, expected_value in expected.items():
+        pair = evaluated.pairs[expected_key]
+        assert isinstance(pair, HashPair)
+        check_integer_object(pair.value, expected_value)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ['{"foo": 5}["foo"]', 5],
+        ['{"foo": 5}["bar"]', None],
+        ['let key = "foo"; {"foo": 5}[key]', 5],
+        ['{}["foo"]', None],
+        ["{5: 5}[5]", 5],
+        ["{true: 5}[true]", 5],
+        ["{false: 5}[false]", 5],
+        [
+            'let people = [{"name": "Alice", "age": 24}, {"name": "Anna", "age": 28}];people[1]["age"] + people[0]["age"];',
+            52,
+        ],
+        [
+            'let getName = fn(person) { person["name"]; };let people = [{"name": "Alice", "age": 24}, {"name": "Anna", "age": 28}];people[1]["age"] + people[0]["age"];getName(people[0]);',
+            "Alice",
+        ],
+    ],
+)
+def test_hash_index_expressions(input: str, expected: int | str | None):
+    evaluated = execute_eval(input)
+    if isinstance(expected, int):
+        check_integer_object(evaluated, expected)
+    if isinstance(expected, str):
+        check_string_object(evaluated, expected)
+    if expected is None:
+        check_null_object(evaluated)

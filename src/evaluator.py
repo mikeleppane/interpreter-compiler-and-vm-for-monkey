@@ -1,3 +1,4 @@
+from collections.abc import Hashable
 from typing import cast
 
 from src.libast import (
@@ -8,6 +9,7 @@ from src.libast import (
     Expression,
     ExpressionStatement,
     FunctionLiteral,
+    HashLiteral,
     Identifier,
     IfExpression,
     IndexExpression,
@@ -28,6 +30,8 @@ from src.object import (
     Environment,
     Error,
     Function,
+    Hash,
+    HashPair,
     Integer,
     Null,
     Object,
@@ -116,6 +120,9 @@ def eval(node: Node | None, env: Environment) -> Object:  # noqa: C901
         if is_error(index):
             return index
         return eval_index_expression(left, index)
+
+    if isinstance(node, HashLiteral):
+        return eval_hash_literal(node, env)
 
     return NULL
 
@@ -300,7 +307,19 @@ def is_truthy(obj: Object) -> bool:
 def eval_index_expression(left: Object, index: Object) -> Object:
     if left.type() == OBJECT_TYPE.ARRAY_OBJ and index.type() == OBJECT_TYPE.INTEGER:
         return eval_array_index_expression(cast(Array, left), cast(Integer, index))
+    if left.type() == OBJECT_TYPE.HASH_OBJ:
+        return eval_hash_index_expression(cast(Hash, left), index)
     return Error(message=f"index operator not supported: {left.type()}[{index.type()}]")
+
+
+def eval_hash_index_expression(hash: Hash, index: Object) -> Object:
+    if not isinstance(index, Hashable):
+        return Error(message=f"unusable as hash key: {index.type()}")
+    try:
+        pair = hash.pairs[index]
+    except KeyError:
+        return NULL
+    return pair.value
 
 
 def eval_array_index_expression(array: Array, index: Integer) -> Object:
@@ -308,3 +327,18 @@ def eval_array_index_expression(array: Array, index: Integer) -> Object:
         return array.elements[index.value]
     except IndexError:
         return NULL
+
+
+def eval_hash_literal(node: HashLiteral, env: Environment) -> Object:
+    pairs: dict[Hashable, HashPair] = {}
+    for key_node, value_node in node.pairs.items():
+        key = eval(key_node, env)
+        if is_error(key):
+            return key
+        if not isinstance(key, Hashable):
+            return Error(message=f"unusable as hash key: {key.type()}")
+        value = eval(value_node, env)
+        if is_error(value):
+            return value
+        pairs[key] = HashPair(key=key, value=value)
+    return Hash(pairs=pairs)

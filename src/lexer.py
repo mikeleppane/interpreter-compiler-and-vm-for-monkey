@@ -74,15 +74,20 @@ class Lexer:
                 token = Token(token_type=TokenType.LBRACKET, literal="[")
             case "]":
                 token = Token(token_type=TokenType.RBRACKET, literal="]")
+            case ":":
+                token = Token(token_type=TokenType.COLON, literal=":")
             case _:
                 if self._is_letter():
-                    token.literal = self.read_identifier()
-                    token.token_type = lookup_ident(token.literal)
-                    return token
+                    literal = self.read_identifier()
+                    return Token(
+                        token_type=lookup_ident(literal),
+                        literal=literal,
+                    )
                 if self.current_char.isdigit():
-                    token.token_type = TokenType.INT
-                    token.literal = self.read_number()
-                    return token
+                    return Token(
+                        token_type=TokenType.INT,
+                        literal=self.read_number(),
+                    )
                 token = Token(token_type=TokenType.ILLEGAL, literal=self.current_char)
         self.read_char()
         return token

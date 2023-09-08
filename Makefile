@@ -24,4 +24,4 @@ test-unit:
 	poetry run pytest -v tests/unit
 
 cov:
-	poetry run pytest -v --cov="."
+	poetry run pytest -v --cov="./src"

@@ -12,6 +12,7 @@ from src.libast import (
     Expression,
     ExpressionStatement,
     FunctionLiteral,
+    HashLiteral,
     Identifier,
     IfExpression,
     IndexExpression,
@@ -79,6 +80,7 @@ class Parser:
         self.register_prefix(TokenType.FUNCTION, self.parse_function_expression)
         self.register_prefix(TokenType.STRING, self.parse_string_literal)
         self.register_prefix(TokenType.LBRACKET, self.parse_array_literal)
+        self.register_prefix(TokenType.LBRACE, self.parse_hash_literal)
         self.register_infix(TokenType.PLUS, self.parse_infix_expression)
         self.register_infix(TokenType.MINUS, self.parse_infix_expression)
         self.register_infix(TokenType.SLASH, self.parse_infix_expression)
@@ -119,31 +121,29 @@ class Parser:
         if not self.expect_peek(TokenType.IDENT):
             return None
         identifier = Identifier(token=current_token, value=self.current_token.literal)
-        let_stm = LetStatement(token=current_token, name=identifier)
 
         if not self.expect_peek(TokenType.ASSIGN):
             return None
 
         self.next_token()
 
-        let_stm.value = self.parse_expression(Precedence.LOWEST)
+        value = self.parse_expression(Precedence.LOWEST)
 
         if self.peek_token.has_token_type(TokenType.SEMICOLON):
             self.next_token()
 
-        return let_stm
+        return LetStatement(token=current_token, name=identifier, value=value)
 
     def parse_return_statement(self) -> ReturnStatement:
         current_token = self.current_token
         self.next_token()
 
-        stmt = ReturnStatement(token=current_token)
-        stmt.return_value = self.parse_expression(Precedence.LOWEST)
+        return_value = self.parse_expression(Precedence.LOWEST)
 
         if self.peek_token.has_token_type(TokenType.SEMICOLON):
             self.next_token()
 
-        return stmt
+        return ReturnStatement(token=current_token, return_value=return_value)
 
     def expect_peek(self, kind: TokenType) -> bool:
         if self.peek_token.has_token_type(kind):
@@ -278,7 +278,7 @@ class Parser:
 
         consequence = self.parse_block_statement()
 
-        if_expr = IfExpression(token=current_token, condition=condition, consequence=consequence)
+        alternative = None
 
         if self.peek_token.has_token_type(TokenType.ELSE):
             self.next_token()
@@ -286,9 +286,14 @@ class Parser:
             if not self.expect_peek(TokenType.LBRACE):
                 return None
 
-            if_expr.alternative = self.parse_block_statement()
+            alternative = self.parse_block_statement()
 
-        return if_expr
+        return IfExpression(
+            token=current_token,
+            condition=condition,
+            consequence=consequence,
+            alternative=alternative,
+        )
 
     def parse_block_statement(self) -> BlockStatement:
         current_token = self.current_token
@@ -419,3 +424,32 @@ class Parser:
             return None
 
         return IndexExpression(token=current_token, left=left, index=index)
+
+    def parse_hash_literal(self) -> Expression | None:
+        current_token = self.current_token
+        pairs: dict[Expression, Expression] = {}
+
+        while not self.peek_token.has_token_type(TokenType.RBRACE):
+            self.next_token()
+            key = self.parse_expression(Precedence.LOWEST)
+
+            if not self.expect_peek(TokenType.COLON):
+                return None
+
+            self.next_token()
+            value = self.parse_expression(Precedence.LOWEST)
+
+            if key is None or value is None:
+                return None
+
+            pairs[key] = value
+
+            if not self.peek_token.has_token_type(TokenType.RBRACE) and not self.expect_peek(
+                TokenType.COMMA
+            ):
+                return None
+
+        if not self.expect_peek(TokenType.RBRACE):
+            return None
+
+        return HashLiteral(token=current_token, pairs=pairs)

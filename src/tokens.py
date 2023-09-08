@@ -33,9 +33,10 @@ class TokenType(StrEnum):
     STRING = "STRING"
     LBRACKET = "["
     RBRACKET = "]"
+    COLON = ":"
 
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class Token:
     token_type: TokenType
     literal: str
