@@ -3,7 +3,17 @@ import pytest
 from src.evaluator import NULL, eval
 from src.lexer import Lexer
 from src.libparser import Parser
-from src.object import Boolean, Environment, Error, Function, Integer, Object, String
+from src.object import (
+    Array,
+    Boolean,
+    Environment,
+    Error,
+    Function,
+    Integer,
+    Null,
+    Object,
+    String,
+)
 
 
 def execute_eval(input: str) -> Object:
@@ -297,10 +307,179 @@ def test_string_concatenation():
         ['len("one", "two")', "wrong number of arguments. got=2, want=1"],
     ],
 )
-def test_builtin_functions(input: str, expected: int | str):
+def test_len_builtin_functions(input: str, expected: int | str):
     evaluated = execute_eval(input)
     if isinstance(expected, int):
         check_integer_object(evaluated, expected)
     if isinstance(expected, str):
         assert isinstance(evaluated, Error)
         assert evaluated.message == expected
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["first([1,2,3])", 1],
+        ["first([0])", 0],
+        ["first([])", Null],
+        ["first(1)", "argument to 'first' must be ARRAY, got INTEGER"],
+        ["first([1,2], [3,4])", "wrong number of arguments. got=2, want=1"],
+    ],
+)
+def test_first_builtin_functions(input: str, expected: int | str):
+    evaluated = execute_eval(input)
+    if isinstance(expected, int):
+        check_integer_object(evaluated, expected)
+    if isinstance(expected, Null):
+        assert isinstance(evaluated, Null)
+    if isinstance(expected, str):
+        assert isinstance(evaluated, Error)
+        assert evaluated.message == expected
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["last([1,2,3])", 3],
+        ["last([0])", 0],
+        ["last([])", Null],
+        ["last(1)", "argument to 'last' must be ARRAY, got INTEGER"],
+        ["last([1,2], [3,4])", "wrong number of arguments. got=2, want=1"],
+    ],
+)
+def test_last_builtin_functions(input: str, expected: int | str):
+    evaluated = execute_eval(input)
+    if isinstance(expected, int):
+        check_integer_object(evaluated, expected)
+    if isinstance(expected, Null):
+        assert isinstance(evaluated, Null)
+    if isinstance(expected, str):
+        assert isinstance(evaluated, Error)
+        assert evaluated.message == expected
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["rest([1,2,3])", [2, 3]],
+        ["rest([1,2])", [2]],
+        ["rest([])", Null],
+        ["rest(1)", "argument to 'rest' must be ARRAY, got INTEGER"],
+        ["rest([1,2], [3,4])", "wrong number of arguments. got=2, want=1"],
+    ],
+)
+def test_rest_builtin_functions(input: str, expected: list | str):
+    evaluated = execute_eval(input)
+    if isinstance(expected, list):
+        assert isinstance(evaluated, Array)
+        assert len(evaluated.elements) == len(expected)
+    if isinstance(expected, Null):
+        assert isinstance(evaluated, Null)
+    if isinstance(expected, str):
+        assert isinstance(evaluated, Error)
+        assert evaluated.message == expected
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["push([1,2,3], 1)", [1, 2, 3, 4]],
+        ["push([], 1)", [1]],
+        ["push(1,1)", "argument to 'push' must be ARRAY, got INTEGER"],
+        ["push([1,2], [3,4], 1)", "wrong number of arguments. got=3, want=2"],
+    ],
+)
+def test_push_builtin_functions(input: str, expected: list | str):
+    evaluated = execute_eval(input)
+    if isinstance(expected, list):
+        assert isinstance(evaluated, Array)
+        assert len(evaluated.elements) == len(expected)
+    if isinstance(expected, Null):
+        assert isinstance(evaluated, Null)
+    if isinstance(expected, str):
+        assert isinstance(evaluated, Error)
+        assert evaluated.message == expected
+
+
+def test_array_literals():
+    input = "[1, 2 * 2, 3 + 3]"
+
+    evaluated = execute_eval(input)
+
+    assert isinstance(evaluated, Array)
+
+    assert len(evaluated.elements) == 3
+
+    check_integer_object(evaluated.elements[0], 1)
+    check_integer_object(evaluated.elements[1], 4)
+    check_integer_object(evaluated.elements[2], 6)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["[1,2,3][0]", 1],
+        ["[1,2,3][1]", 2],
+        ["[1,2,3][2]", 3],
+        ["let i = 0; [1][i]", 1],
+        ["[1, 2, 3][1 + 1];", 3],
+        ["let myArray = [1, 2, 3]; myArray[2];", 3],
+        ["let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];", 6],
+        ["let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i]", 2],
+        ["[1, 2, 3][3]", None],
+        ["[1, 2, 3][-1]", 3],
+    ],
+)
+def test_array_index_expressions(input: str, expected: int | str):
+    evaluated = execute_eval(input)
+    if isinstance(expected, int):
+        check_integer_object(evaluated, expected)
+    if expected is None:
+        check_null_object(evaluated)
+
+
+def test_map_function():
+    input = """
+        let map = fn(arr, f) {
+            let iter = fn(arr, accumulated) {
+                if (len(arr) == 0) {
+                    accumulated
+                } else {
+                    iter(rest(arr), push(accumulated, f(first(arr))));
+                }
+            };
+            iter(arr, []);
+        };
+        let a = [1,2,3,4];
+        let double = fn(x) { x * 2};
+        map(a, double)
+"""
+    evaluated = execute_eval(input)
+    assert isinstance(evaluated, Array)
+    assert len(evaluated.elements) == 4
+    assert evaluated.elements[0].value == 2
+    assert evaluated.elements[1].value == 4
+    assert evaluated.elements[2].value == 6
+    assert evaluated.elements[3].value == 8
+
+
+def test_reduce_function():
+    input = """
+        let reduce = fn(arr, initial, f) {
+                let iter = fn(arr, result) {
+                    if (len(arr) == 0) {
+                        result
+                    } else {
+                        iter(rest(arr), f(result, first(arr)));
+                    }
+                };
+                    iter(arr, initial);
+                };
+        let sum = fn(arr) {
+            reduce(arr, 0, fn(initial, el) { initial + el });
+        };
+        sum([1,2,3,4,5])
+"""
+    evaluated = execute_eval(input)
+    assert isinstance(evaluated, Integer)
+    assert evaluated.value == 15

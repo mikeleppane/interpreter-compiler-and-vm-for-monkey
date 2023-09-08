@@ -2,12 +2,14 @@ import pytest
 
 from src.lexer import Lexer
 from src.libast import (
+    ArrayLiteral,
     Boolean,
     CallExpression,
     ExpressionStatement,
     FunctionLiteral,
     Identifier,
     IfExpression,
+    IndexExpression,
     InfixExpression,
     IntegerLiteral,
     LetStatement,
@@ -332,6 +334,11 @@ def test_parsing_infix_expressions_with_bool(
         ["let x = 1 * 2 * 3 * 4 * 5", "let x = ((((1 * 2) * 3) * 4) * 5);"],
         ["x * y / 2 + 3 * 8 - 123", "((((x * y) / 2) + (3 * 8)) - 123)"],
         ["true == false", "(true == false)"],
+        ["a * [1, 2, 3, 4][b * c] * d", "((a * ([1, 2, 3, 4][(b * c)])) * d)"],
+        [
+            "add(a * b[2], b[1], 2 * [1, 2][1])",
+            "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
+        ],
     ],
 )
 def test_operator_precedence_parsing(input: str, expected: str):
@@ -525,3 +532,69 @@ def test_string_literal_expression():
         assert isinstance(statement.expression, StringLiteral)
 
         assert statement.expression.value == "hello world"
+
+
+def test_parsing_array_literals():
+    input = "[1, 2 * 2, 3 + 3]"
+    lexer = Lexer(input)
+
+    parser = Parser(lexer=lexer)
+    program = parser.parse_program()
+
+    assert len(program.statements) == 1
+    check_parser_errors(parser=parser)
+
+    for statement in program.statements:
+        assert isinstance(statement, ExpressionStatement)
+
+        assert isinstance(statement.expression, ArrayLiteral)
+
+        assert len(statement.expression.elements) == 3
+
+        assert isinstance(statement.expression.elements[0], IntegerLiteral)
+
+        assert statement.expression.elements[0].value == 1
+
+        assert isinstance(statement.expression.elements[1], InfixExpression)
+
+        assert statement.expression.elements[1].left.value == 2
+
+        assert statement.expression.elements[1].operator == "*"
+
+        assert statement.expression.elements[1].right.value == 2
+
+        assert isinstance(statement.expression.elements[2], InfixExpression)
+
+        assert statement.expression.elements[2].left.value == 3
+
+        assert statement.expression.elements[2].operator == "+"
+
+        assert statement.expression.elements[2].right.value == 3
+
+
+def test_parsing_index_expressions():
+    input = "myArray[1 + 1]"
+
+    lexer = Lexer(input)
+    parser = Parser(lexer=lexer)
+    program = parser.parse_program()
+
+    assert len(program.statements) == 1
+    check_parser_errors(parser=parser)
+
+    for statement in program.statements:
+        assert isinstance(statement, ExpressionStatement)
+
+        assert isinstance(statement.expression, IndexExpression)
+
+        assert isinstance(statement.expression.left, Identifier)
+
+        assert statement.expression.left.value == "myArray"
+
+        assert isinstance(statement.expression.index, InfixExpression)
+
+        assert statement.expression.index.left.value == 1
+
+        assert statement.expression.index.operator == "+"
+
+        assert statement.expression.index.right.value == 1

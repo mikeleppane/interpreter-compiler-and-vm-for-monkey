@@ -31,6 +31,8 @@ class TokenType(StrEnum):
     EQ = "=="
     NOT_EQ = "!="
     STRING = "STRING"
+    LBRACKET = "["
+    RBRACKET = "]"
 
 
 @dataclass

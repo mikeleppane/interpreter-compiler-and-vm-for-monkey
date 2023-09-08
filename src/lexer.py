@@ -70,6 +70,10 @@ class Lexer:
                 token = token
             case '"':
                 token = Token(token_type=TokenType.STRING, literal=self.read_string())
+            case "[":
+                token = Token(token_type=TokenType.LBRACKET, literal="[")
+            case "]":
+                token = Token(token_type=TokenType.RBRACKET, literal="]")
             case _:
                 if self._is_letter():
                     token.literal = self.read_identifier()

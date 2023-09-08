@@ -16,6 +16,7 @@ class OBJECT_TYPE(StrEnum):
     FUNCTION_OBJ = "FUNCTION"
     STRING_OBJ = "STRING"
     BUILTIN_OBJ = "BUILTIN"
+    ARRAY_OBJ = "ARRAY"
 
 
 class Object(Protocol):
@@ -147,3 +148,15 @@ class Builtin(Object):
 
     def inspect(self) -> str:
         return "builtin function"
+
+
+@dataclass
+class Array(Object):
+    elements: list[Object]
+
+    def type(self) -> ObjectType:
+        return OBJECT_TYPE.ARRAY_OBJ
+
+    def inspect(self) -> str:
+        elements = [e.inspect() for e in self.elements]
+        return f"[{', '.join(elements)}]"

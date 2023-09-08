@@ -6,7 +6,7 @@ from src.libparser import Parser
 from src.object import Environment
 
 
-def main():
+def main() -> None:
     input = """
         let fibonacci = fn(x) {
                             if (x == 0) {

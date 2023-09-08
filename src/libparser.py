@@ -5,6 +5,7 @@ from typing import TypeAlias
 
 from src.lexer import Lexer
 from src.libast import (
+    ArrayLiteral,
     BlockStatement,
     Boolean,
     CallExpression,
@@ -13,6 +14,7 @@ from src.libast import (
     FunctionLiteral,
     Identifier,
     IfExpression,
+    IndexExpression,
     InfixExpression,
     IntegerLiteral,
     LetStatement,
@@ -36,6 +38,7 @@ class Precedence(IntEnum):
     PRODUCT = auto()
     PREFIX = auto()
     CALL = auto()
+    INDEX = auto()
 
 
 precedences = {
@@ -48,6 +51,7 @@ precedences = {
     TokenType.SLASH: Precedence.PRODUCT,
     TokenType.ASTERISK: Precedence.PRODUCT,
     TokenType.LPAREN: Precedence.CALL,
+    TokenType.LBRACKET: Precedence.INDEX,
 }
 
 
@@ -74,6 +78,7 @@ class Parser:
         self.register_prefix(TokenType.IF, self.parse_if_expression)
         self.register_prefix(TokenType.FUNCTION, self.parse_function_expression)
         self.register_prefix(TokenType.STRING, self.parse_string_literal)
+        self.register_prefix(TokenType.LBRACKET, self.parse_array_literal)
         self.register_infix(TokenType.PLUS, self.parse_infix_expression)
         self.register_infix(TokenType.MINUS, self.parse_infix_expression)
         self.register_infix(TokenType.SLASH, self.parse_infix_expression)
@@ -83,6 +88,7 @@ class Parser:
         self.register_infix(TokenType.LT, self.parse_infix_expression)
         self.register_infix(TokenType.GT, self.parse_infix_expression)
         self.register_infix(TokenType.LPAREN, self.parse_call_expression)
+        self.register_infix(TokenType.LBRACKET, self.parse_index_expression)
 
     def next_token(self) -> None:
         self.current_token: Token = self.peek_token
@@ -340,7 +346,7 @@ class Parser:
 
     def parse_call_expression(self, function: Expression) -> Expression | None:
         current_token = self.current_token
-        arguments = self.parse_call_arguments()
+        arguments = self.parse_expression_list(TokenType.RPAREN)
         return CallExpression(token=current_token, arguments=arguments, function=function)
 
     def parse_call_arguments(self) -> list[Expression]:
@@ -370,3 +376,46 @@ class Parser:
 
     def parse_string_literal(self) -> Expression:
         return StringLiteral(token=self.current_token, value=self.current_token.literal)
+
+    def parse_array_literal(self) -> Expression:
+        current_token = self.current_token
+        elements = self.parse_expression_list(TokenType.RBRACKET)
+        return ArrayLiteral(token=current_token, elements=elements)
+
+    def parse_expression_list(self, end: TokenType) -> list[Expression]:
+        expressions: list[Expression] = []
+
+        if self.peek_token.has_token_type(end):
+            self.next_token()
+            return expressions
+
+        self.next_token()
+        expression = self.parse_expression(Precedence.LOWEST)
+        if expression is not None:
+            expressions.append(expression)
+
+        while self.peek_token.has_token_type(TokenType.COMMA):
+            self.next_token()
+            self.next_token()
+            expression = self.parse_expression(Precedence.LOWEST)
+            if expression is not None:
+                expressions.append(expression)
+
+        if not self.expect_peek(end):
+            return []
+
+        return expressions
+
+    def parse_index_expression(self, left: Expression) -> Expression | None:
+        current_token = self.current_token
+
+        self.next_token()
+        index = self.parse_expression(Precedence.LOWEST)
+
+        if not self.expect_peek(TokenType.RBRACKET):
+            return None
+
+        if index is None:
+            return None
+
+        return IndexExpression(token=current_token, left=left, index=index)

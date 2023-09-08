@@ -1,4 +1,7 @@
+from typing import cast
+
 from src.libast import (
+    ArrayLiteral,
     BlockStatement,
     Boolean,
     CallExpression,
@@ -7,6 +10,7 @@ from src.libast import (
     FunctionLiteral,
     Identifier,
     IfExpression,
+    IndexExpression,
     InfixExpression,
     IntegerLiteral,
     LetStatement,
@@ -17,7 +21,7 @@ from src.libast import (
     StringLiteral,
 )
 from src.libbuiltins import builtins
-from src.object import OBJECT_TYPE
+from src.object import OBJECT_TYPE, Array
 from src.object import Boolean as BooleanObject
 from src.object import (
     Builtin,
@@ -99,6 +103,19 @@ def eval(node: Node | None, env: Environment) -> Object:  # noqa: C901
         return apply_function(func, args)
     if isinstance(node, StringLiteral):
         return String(value=node.value)
+    if isinstance(node, ArrayLiteral):
+        elements = eval_expressions(node.elements, env)
+        if len(elements) == 1 and is_error(elements[0]):
+            return elements[0]
+        return Array(elements=elements)
+    if isinstance(node, IndexExpression):
+        left = eval(node.left, env)
+        if is_error(left):
+            return left
+        index = eval(node.index, env)
+        if is_error(index):
+            return index
+        return eval_index_expression(left, index)
 
     return NULL
 
@@ -278,3 +295,16 @@ def is_truthy(obj: Object) -> bool:
     if obj == FALSE:
         return False
     return True
+
+
+def eval_index_expression(left: Object, index: Object) -> Object:
+    if left.type() == OBJECT_TYPE.ARRAY_OBJ and index.type() == OBJECT_TYPE.INTEGER:
+        return eval_array_index_expression(cast(Array, left), cast(Integer, index))
+    return Error(message=f"index operator not supported: {left.type()}[{index.type()}]")
+
+
+def eval_array_index_expression(array: Array, index: Integer) -> Object:
+    try:
+        return array.elements[index.value]
+    except IndexError:
+        return NULL

@@ -32,8 +32,12 @@ class Repl:
             print(f"\t{error}")
 
 
-if __name__ == "__main__":
+def main() -> None:
     print(f"Hello {getpass.getuser()}! This is the Monkey programming language!")
     print("Feel free to type in commands")
     repl = Repl()
     repl.run()
+
+
+if __name__ == "__main__":
+    main()
