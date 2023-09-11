@@ -28,7 +28,6 @@ class Instructions:
             output += f"{i:04} {definition.name} "
             for operand in operand_data.operands:
                 output += f"{operand}"
-
             output += "\n"
 
             i += 1 + operand_data.offset
@@ -58,15 +57,19 @@ class OperandData:
 
 class OpCodes(IntEnum):
     OpConstant = auto()
+    OpAdd = auto()
 
 
-@dataclass
+@dataclass(frozen=True)
 class Definition:
     name: str
     operand_widths: list[int]
 
 
-definitions: dict[Opcode, Definition] = {OpCodes.OpConstant: Definition("OpConstant", [2])}
+definitions: dict[Opcode, Definition] = {
+    OpCodes.OpConstant: Definition("OpConstant", [2]),
+    OpCodes.OpAdd: Definition("OpAdd", []),
+}
 
 
 def lookup(op: int) -> Definition | None:

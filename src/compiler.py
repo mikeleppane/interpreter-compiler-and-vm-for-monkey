@@ -11,13 +11,13 @@ from src.libast import (
 from src.object import Integer, Object
 
 
-@dataclass
+@dataclass(frozen=True)
 class Bytecode:
     instructions: Instructions
     constants: list[Object]
 
 
-@dataclass
+@dataclass(frozen=True)
 class Compiler:
     instructions: Instructions = field(default_factory=Instructions)
     constants: list[Object] = field(default_factory=list)
@@ -34,6 +34,12 @@ class Compiler:
         if isinstance(node, InfixExpression):
             self.compile(node.left)
             self.compile(node.right)
+            match node.operator:
+                case "+":
+                    self.emit(OpCodes.OpAdd, [])
+                # case "-":
+                case _:
+                    print(f"Error: unknown operator {node.operator}")
             return
         if isinstance(node, IntegerLiteral):
             integer = Integer(value=node.value)

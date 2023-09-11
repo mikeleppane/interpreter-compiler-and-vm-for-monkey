@@ -4,10 +4,20 @@ from src.bytecode import Instructions, OpCodes, lookup, make, read_operands
 from tests.unit.helper import flatten
 
 
-def test_make():
-    instructions: list[int] = make(OpCodes.OpConstant, [65534])
-    expected: list[int] = [OpCodes.OpConstant, 255, 254]
-
+@pytest.mark.parametrize(
+    "instructions,expected",
+    [
+        [
+            make(OpCodes.OpConstant, [65534]),
+            [OpCodes.OpConstant, 255, 254],
+        ],
+        [
+            make(OpCodes.OpAdd, []),
+            [OpCodes.OpAdd],
+        ],
+    ],
+)
+def test_make(instructions: list[int], expected: list[int]):
     assert len(instructions) == len(expected)
 
     assert instructions == expected
@@ -17,15 +27,15 @@ def test_instruction_string():
     instructions: Instructions = Instructions(
         inst=flatten(
             [
-                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpAdd, []),
                 make(OpCodes.OpConstant, [2]),
                 make(OpCodes.OpConstant, [65535]),
             ]
         )
     )
-    expected = """0000 OpConstant 1
-0003 OpConstant 2
-0006 OpConstant 65535"""
+    expected = """0000 OpAdd 
+0001 OpConstant 2
+0004 OpConstant 65535"""
 
     print(instructions.to_string())
     print(expected)
