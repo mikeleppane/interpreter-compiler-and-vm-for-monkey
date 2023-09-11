@@ -6,7 +6,7 @@ from typing import TypeAlias
 Opcode: TypeAlias = int
 
 
-@dataclass
+@dataclass(frozen=True)
 class Instructions:
     inst: list[int] = field(default_factory=list)
 
@@ -23,6 +23,8 @@ class Instructions:
 
             operand_data = read_operands(definition, self.inst[i + 1 :])
 
+            assert len(operand_data.operands) == len(definition.operand_widths)
+
             output += f"{i:04} {definition.name} "
             for operand in operand_data.operands:
                 output += f"{operand}"
@@ -32,6 +34,11 @@ class Instructions:
             i += 1 + operand_data.offset
 
         return output
+
+    def add(self, instruction: list[int]) -> int:
+        position = len(self.inst)
+        self.inst.extend(instruction)
+        return position
 
     def __getitem__(self, index: int) -> int:
         return self.inst[index]
