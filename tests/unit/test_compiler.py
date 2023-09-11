@@ -2,15 +2,8 @@ import pytest
 
 from src.bytecode import Instructions, OpCodes, make
 from src.compiler import Compiler
-from src.lexer import Lexer
-from src.libast import Program
-from src.libparser import Parser
-from src.object import Integer, Object
-from tests.unit.helper import flatten
-
-
-def parse(input: str) -> Program:
-    return Parser(lexer=Lexer(input=input)).parse_program()
+from src.object import Object
+from tests.unit.helper import flatten, parse, verify_integer_object
 
 
 def verify_instructions(actual: Instructions, expected: list[int]) -> None:
@@ -18,12 +11,6 @@ def verify_instructions(actual: Instructions, expected: list[int]) -> None:
 
     for index, ins in enumerate(expected):
         assert actual[index] == ins
-
-
-def verify_integer_object(actual: Object, expected: int) -> None:
-    assert isinstance(actual, Integer)
-
-    assert actual.value == expected
 
 
 def verify_constants(actual: list[Object], expected: list[Object]) -> None:
