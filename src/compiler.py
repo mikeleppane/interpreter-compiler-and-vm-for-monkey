@@ -11,6 +11,10 @@ from src.libast import (
 from src.object import Integer, Object
 
 
+class CompilationError(Exception):
+    pass
+
+
 @dataclass(frozen=True)
 class Bytecode:
     instructions: Instructions
@@ -39,7 +43,7 @@ class Compiler:
                     self.emit(OpCodes.OpAdd, [])
                 # case "-":
                 case _:
-                    print(f"Error: unknown operator {node.operator}")
+                    raise CompilationError(f"Error: unknown operator {node.operator}")
             return
         if isinstance(node, IntegerLiteral):
             integer = Integer(value=node.value)

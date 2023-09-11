@@ -26,7 +26,7 @@ def run_vm_test(input: str, expected: Any):
 
 @pytest.mark.parametrize(
     "input,expected",
-    [["1", 1], ["2", 2], ["1 + 2", 2]],
+    [["1", 1], ["2", 2], ["1 + 2", 3]],
 )
 def test_integer_arithmetic(input: str, expected: Any) -> None:
     run_vm_test(input, expected)
