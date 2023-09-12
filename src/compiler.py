@@ -36,7 +36,12 @@ class Compiler:
             match node.operator:
                 case "+":
                     self.emit(OpCodes.OpAdd, [])
-                # case "-":
+                case "-":
+                    self.emit(OpCodes.OpSub, [])
+                case "*":
+                    self.emit(OpCodes.OpMul, [])
+                case "/":
+                    self.emit(OpCodes.OpDiv, [])
                 case _:
                     raise CompilationError(f"Error: unknown operator {node.operator}")
         if isinstance(node, IntegerLiteral):

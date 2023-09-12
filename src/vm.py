@@ -78,11 +78,8 @@ class VM:
                     const_index = int.from_bytes(self.instructions.inst[ip + 1 : ip + 3], "big")
                     ip += 2
                     self.push(self.constants[const_index])
-                case OpCodes.OpAdd:
-                    right = self.pop()
-                    left = self.pop()
-                    if isinstance(left, Integer) and isinstance(right, Integer):
-                        self.push(Integer(value=left.value + right.value))
+                case OpCodes.OpAdd | OpCodes.OpSub | OpCodes.OpMul | OpCodes.OpDiv:
+                    self.execute_binary_operation(opcode)
                 case OpCodes.OpPop:
                     self.pop()
             ip += 1
@@ -99,3 +96,27 @@ class VM:
             instructions=compiler.bytecode().instructions,
             constants=compiler.bytecode().constants,
         )
+
+    def execute_binary_operation(self, opcode: OpCodes) -> None:
+        right = self.pop()
+        left = self.pop()
+        if not isinstance(left, Integer) or not isinstance(right, Integer):
+            raise TypeError("operands must be integers")
+        self.execute_integer_operation(opcode, left, right)
+
+    def execute_integer_operation(self, opcode: OpCodes, left: Integer, right: Integer) -> None:
+        match opcode:
+            case OpCodes.OpAdd:
+                self.push(Integer(value=left.value + right.value))
+                return
+            case OpCodes.OpSub:
+                self.push(Integer(value=left.value - right.value))
+                return
+            case OpCodes.OpMul:
+                self.push(Integer(value=left.value * right.value))
+                return
+            case OpCodes.OpDiv:
+                self.push(Integer(value=left.value // right.value))
+                return
+            case _:
+                raise TypeError("unknown integer operation: {opcode}")

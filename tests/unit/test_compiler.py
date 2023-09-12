@@ -44,6 +44,36 @@ def verify_constants(actual: list[Object], expected: list[Object]) -> None:
                 make(OpCodes.OpPop, []),
             ],
         ],
+        [
+            "1 - 2",
+            [1, 2],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpSub, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "1 * 2",
+            [1, 2],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpMul, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "2 / 1",
+            [2, 1],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpDiv, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
     ],
 )
 def test_integer_arithmetic(input, expected_constants, expected_instructions):

@@ -59,6 +59,9 @@ class OpCodes(IntEnum):
     OpConstant = auto()
     OpAdd = auto()
     OpPop = auto()
+    OpSub = auto()
+    OpMul = auto()
+    OpDiv = auto()
 
 
 @dataclass(frozen=True)
@@ -71,6 +74,9 @@ definitions: dict[Opcode, Definition] = {
     OpCodes.OpConstant: Definition("OpConstant", [2]),
     OpCodes.OpAdd: Definition("OpAdd", []),
     OpCodes.OpPop: Definition("OpPop", []),
+    OpCodes.OpSub: Definition("OpSub", []),
+    OpCodes.OpMul: Definition("OpMul", []),
+    OpCodes.OpDiv: Definition("OpDiv", []),
 }
 
 
