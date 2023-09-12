@@ -1,7 +1,7 @@
 import pytest
 
 from src.bytecode import Instructions, OpCodes, lookup, make, read_operands
-from tests.unit.helper import flatten
+from tests.helper import flatten
 
 
 @pytest.mark.parametrize(
@@ -17,7 +17,7 @@ from tests.unit.helper import flatten
         ],
     ],
 )
-def test_make(instructions: list[int], expected: list[int]):
+def test_make(instructions: list[int], expected: list[int]) -> None:
     assert len(instructions) == len(expected)
 
     assert instructions == expected

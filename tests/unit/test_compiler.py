@@ -3,7 +3,7 @@ import pytest
 from src.bytecode import Instructions, OpCodes, make
 from src.compiler import Compiler
 from src.object import Object
-from tests.unit.helper import flatten, parse, verify_integer_object
+from tests.helper import flatten, parse, verify_integer_object
 
 
 def verify_instructions(actual: Instructions, expected: list[int]) -> None:
@@ -71,6 +71,15 @@ def verify_constants(actual: list[Object], expected: list[Object]) -> None:
                 make(OpCodes.OpConstant, [0]),
                 make(OpCodes.OpConstant, [1]),
                 make(OpCodes.OpDiv, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "-1",
+            [1],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpMinus, []),
                 make(OpCodes.OpPop, []),
             ],
         ],
@@ -167,6 +176,15 @@ def test_integer_arithmetic(input, expected_constants, expected_instructions):
                 make(OpCodes.OpPop, []),
             ],
         ],
+        [
+            "!true",
+            [],
+            [
+                make(OpCodes.OpTrue, []),
+                make(OpCodes.OpBang, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
     ],
 )
 def test_boolean_expressions(input, expected_constants, expected_instructions):
@@ -175,8 +193,6 @@ def test_boolean_expressions(input, expected_constants, expected_instructions):
     compiler.compile(program)
 
     bytecode = compiler.bytecode()
-
-    print(bytecode.instructions.to_string())
 
     verify_instructions(bytecode.instructions, flatten(expected_instructions))
 

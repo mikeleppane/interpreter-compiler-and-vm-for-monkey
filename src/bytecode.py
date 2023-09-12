@@ -67,6 +67,8 @@ class OpCodes(IntEnum):
     OpEqual = auto()
     OpNotEqual = auto()
     OpGreaterThan = auto()
+    OpMinus = auto()
+    OpBang = auto()
 
 
 @dataclass(frozen=True)
@@ -87,6 +89,8 @@ definitions: dict[Opcode, Definition] = {
     OpCodes.OpEqual: Definition("OpEqual", []),
     OpCodes.OpNotEqual: Definition("OpNotEqual", []),
     OpCodes.OpGreaterThan: Definition("OpGreaterThan", []),
+    OpCodes.OpMinus: Definition("OpMinus", []),
+    OpCodes.OpBang: Definition("OpBang", []),
 }
 
 

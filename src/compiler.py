@@ -7,6 +7,7 @@ from src.libast import (
     InfixExpression,
     IntegerLiteral,
     Node,
+    PrefixExpression,
     Program,
 )
 from src.object import Integer, Object
@@ -54,6 +55,15 @@ class Compiler:
                     self.emit(OpCodes.OpEqual, [])
                 case "!=":
                     self.emit(OpCodes.OpNotEqual, [])
+                case _:
+                    raise CompilationError(f"Error: unknown operator {node.operator}")
+        if isinstance(node, PrefixExpression):
+            self.compile(node.right)
+            match node.operator:
+                case "!":
+                    self.emit(OpCodes.OpBang, [])
+                case "-":
+                    self.emit(OpCodes.OpMinus, [])
                 case _:
                     raise CompilationError(f"Error: unknown operator {node.operator}")
         if isinstance(node, IntegerLiteral):

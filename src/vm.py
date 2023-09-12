@@ -79,7 +79,9 @@ class VM:
             opcode = OpCodes(self.instructions[ip])
             match opcode:
                 case OpCodes.OpConstant:
-                    const_index = int.from_bytes(self.instructions.inst[ip + 1 : ip + 3], "big")
+                    const_index = int.from_bytes(
+                        self.instructions.inst[ip + 1 : ip + 3], "big"
+                    )
                     ip += 2
                     self.push(self.constants[const_index])
                 case OpCodes.OpAdd | OpCodes.OpSub | OpCodes.OpMul | OpCodes.OpDiv:
@@ -92,6 +94,10 @@ class VM:
                     self.push(FALSE)
                 case OpCodes.OpEqual | OpCodes.OpNotEqual | OpCodes.OpGreaterThan:
                     self.execute_comparison(opcode)
+                case OpCodes.OpBang:
+                    self.execute_bang_operator()
+                case OpCodes.OpMinus:
+                    self.execute_minus_operator()
             ip += 1
 
     def push(self, obj: Object) -> None:
@@ -114,7 +120,9 @@ class VM:
             raise TypeError("operands must be integers")
         self.execute_integer_operation(opcode, left, right)
 
-    def execute_integer_operation(self, opcode: OpCodes, left: Integer, right: Integer) -> None:
+    def execute_integer_operation(
+        self, opcode: OpCodes, left: Integer, right: Integer
+    ) -> None:
         match opcode:
             case OpCodes.OpAdd:
                 self.push(Integer(value=left.value + right.value))
@@ -143,9 +151,13 @@ class VM:
             case OpCodes.OpNotEqual:
                 self.push(TRUE if left != right else FALSE)
             case _:
-                raise TypeError(f"unknown operator: {opcode} ({left.type} {right.type})")
+                raise TypeError(
+                    f"unknown operator: {opcode} ({left.type} {right.type})"
+                )
 
-    def execute_integer_comparison(self, opcode: OpCodes, left: Integer, right: Integer) -> None:
+    def execute_integer_comparison(
+        self, opcode: OpCodes, left: Integer, right: Integer
+    ) -> None:
         match opcode:
             case OpCodes.OpEqual:
                 self.push(TRUE if left.value == right.value else FALSE)
@@ -158,3 +170,16 @@ class VM:
                 return
             case _:
                 raise TypeError("unknown integer comparison: {opcode}")
+
+    def execute_bang_operator(self) -> None:
+        operand = self.pop()
+        if operand == FALSE:
+            self.push(TRUE)
+            return
+        self.push(FALSE)
+
+    def execute_minus_operator(self) -> None:
+        operand = self.pop()
+        if not isinstance(operand, Integer):
+            raise TypeError(f"unsupported type for negation: {operand.type()}")
+        self.push(Integer(value=-operand.value))
