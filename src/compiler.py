@@ -32,6 +32,11 @@ class Compiler:
             for statement in node.statements:
                 self.compile(statement)
         if isinstance(node, InfixExpression):
+            if node.operator == "<":
+                self.compile(node.right)
+                self.compile(node.left)
+                self.emit(OpCodes.OpGreaterThan, [])
+                return
             self.compile(node.left)
             self.compile(node.right)
             match node.operator:
@@ -43,6 +48,12 @@ class Compiler:
                     self.emit(OpCodes.OpMul, [])
                 case "/":
                     self.emit(OpCodes.OpDiv, [])
+                case ">":
+                    self.emit(OpCodes.OpGreaterThan, [])
+                case "==":
+                    self.emit(OpCodes.OpEqual, [])
+                case "!=":
+                    self.emit(OpCodes.OpNotEqual, [])
                 case _:
                     raise CompilationError(f"Error: unknown operator {node.operator}")
         if isinstance(node, IntegerLiteral):

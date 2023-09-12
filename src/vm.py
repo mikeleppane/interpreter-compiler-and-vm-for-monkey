@@ -90,6 +90,8 @@ class VM:
                     self.push(TRUE)
                 case OpCodes.OpFalse:
                     self.push(FALSE)
+                case OpCodes.OpEqual | OpCodes.OpNotEqual | OpCodes.OpGreaterThan:
+                    self.execute_comparison(opcode)
             ip += 1
 
     def push(self, obj: Object) -> None:
@@ -128,3 +130,31 @@ class VM:
                 return
             case _:
                 raise TypeError("unknown integer operation: {opcode}")
+
+    def execute_comparison(self, opcode: OpCodes) -> None:
+        right = self.pop()
+        left = self.pop()
+        if isinstance(left, Integer) and isinstance(right, Integer):
+            self.execute_integer_comparison(opcode, left, right)
+            return
+        match opcode:
+            case OpCodes.OpEqual:
+                self.push(TRUE if left == right else FALSE)
+            case OpCodes.OpNotEqual:
+                self.push(TRUE if left != right else FALSE)
+            case _:
+                raise TypeError(f"unknown operator: {opcode} ({left.type} {right.type})")
+
+    def execute_integer_comparison(self, opcode: OpCodes, left: Integer, right: Integer) -> None:
+        match opcode:
+            case OpCodes.OpEqual:
+                self.push(TRUE if left.value == right.value else FALSE)
+                return
+            case OpCodes.OpNotEqual:
+                self.push(TRUE if left.value != right.value else FALSE)
+                return
+            case OpCodes.OpGreaterThan:
+                self.push(TRUE if left.value > right.value else FALSE)
+                return
+            case _:
+                raise TypeError("unknown integer comparison: {opcode}")

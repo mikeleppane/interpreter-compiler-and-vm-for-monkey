@@ -107,6 +107,66 @@ def test_integer_arithmetic(input, expected_constants, expected_instructions):
                 make(OpCodes.OpPop, []),
             ],
         ],
+        [
+            "1 > 2",
+            [1, 2],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpGreaterThan, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "1 < 2",
+            [2, 1],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpGreaterThan, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "1 == 2",
+            [1, 2],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpEqual, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "1 != 2",
+            [1, 2],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpNotEqual, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "true == false",
+            [],
+            [
+                make(OpCodes.OpTrue, []),
+                make(OpCodes.OpFalse, []),
+                make(OpCodes.OpEqual, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "true != false",
+            [],
+            [
+                make(OpCodes.OpTrue, []),
+                make(OpCodes.OpFalse, []),
+                make(OpCodes.OpNotEqual, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
     ],
 )
 def test_boolean_expressions(input, expected_constants, expected_instructions):
