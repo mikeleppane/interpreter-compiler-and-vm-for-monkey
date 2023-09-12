@@ -44,3 +44,14 @@ def run_vm_test(input: str, expected: Any):
 )
 def test_integer_arithmetic(input: str, expected: Any) -> None:
     run_vm_test(input, expected)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["true", True],
+        ["false", False],
+    ],
+)
+def test_boolean_expressions(input: str, expected: Any) -> None:
+    run_vm_test(input, expected)

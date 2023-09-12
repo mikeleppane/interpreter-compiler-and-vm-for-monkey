@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 
 from src.bytecode import Instructions, OpCodes, make
 from src.libast import (
+    Boolean,
     ExpressionStatement,
     InfixExpression,
     IntegerLiteral,
@@ -50,6 +51,11 @@ class Compiler:
         if isinstance(node, ExpressionStatement) and node.expression is not None:
             self.compile(node.expression)
             self.emit(OpCodes.OpPop, [])
+        if isinstance(node, Boolean):
+            if node.value:
+                self.emit(OpCodes.OpTrue, [])
+            else:
+                self.emit(OpCodes.OpFalse, [])
 
     def bytecode(self) -> Bytecode:
         return Bytecode(instructions=self.instructions, constants=self.constants)

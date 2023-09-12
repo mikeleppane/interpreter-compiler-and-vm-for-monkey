@@ -86,3 +86,38 @@ def test_integer_arithmetic(input, expected_constants, expected_instructions):
     verify_instructions(bytecode.instructions, flatten(expected_instructions))
 
     verify_constants(bytecode.constants, expected_constants)
+
+
+@pytest.mark.parametrize(
+    "input,expected_constants,expected_instructions",
+    [
+        [
+            "true",
+            [],
+            [
+                make(OpCodes.OpTrue, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "false",
+            [],
+            [
+                make(OpCodes.OpFalse, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+    ],
+)
+def test_boolean_expressions(input, expected_constants, expected_instructions):
+    program = parse(input)
+    compiler = Compiler()
+    compiler.compile(program)
+
+    bytecode = compiler.bytecode()
+
+    print(bytecode.instructions.to_string())
+
+    verify_instructions(bytecode.instructions, flatten(expected_instructions))
+
+    verify_constants(bytecode.constants, expected_constants)

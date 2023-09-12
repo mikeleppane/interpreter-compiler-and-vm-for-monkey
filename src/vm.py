@@ -3,7 +3,7 @@ from typing import Self
 
 from src.bytecode import Instructions, OpCodes
 from src.compiler import Compiler
-from src.object import Integer, Object
+from src.object import Boolean, Integer, Object
 
 STACK_SIZE = 2048
 
@@ -18,6 +18,10 @@ class StackUnderflow(Exception):
 
 class EmptyStackObjectError(Exception):
     pass
+
+
+TRUE = Boolean(value=True)
+FALSE = Boolean(value=False)
 
 
 @dataclass
@@ -82,6 +86,10 @@ class VM:
                     self.execute_binary_operation(opcode)
                 case OpCodes.OpPop:
                     self.pop()
+                case OpCodes.OpTrue:
+                    self.push(TRUE)
+                case OpCodes.OpFalse:
+                    self.push(FALSE)
             ip += 1
 
     def push(self, obj: Object) -> None:

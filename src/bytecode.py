@@ -62,6 +62,8 @@ class OpCodes(IntEnum):
     OpSub = auto()
     OpMul = auto()
     OpDiv = auto()
+    OpTrue = auto()
+    OpFalse = auto()
 
 
 @dataclass(frozen=True)
@@ -77,6 +79,8 @@ definitions: dict[Opcode, Definition] = {
     OpCodes.OpSub: Definition("OpSub", []),
     OpCodes.OpMul: Definition("OpMul", []),
     OpCodes.OpDiv: Definition("OpDiv", []),
+    OpCodes.OpTrue: Definition("OpTrue", []),
+    OpCodes.OpFalse: Definition("OpFalse", []),
 }
 
 
