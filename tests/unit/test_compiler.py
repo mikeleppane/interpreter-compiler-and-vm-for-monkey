@@ -197,3 +197,32 @@ def test_boolean_expressions(input, expected_constants, expected_instructions):
     verify_instructions(bytecode.instructions, flatten(expected_instructions))
 
     verify_constants(bytecode.constants, expected_constants)
+
+
+@pytest.mark.parametrize(
+    "input,expected_constants,expected_instructions",
+    [
+        [
+            "if (true) { 10 }; 3333;",
+            [10, 3333],
+            [
+                make(OpCodes.OpTrue, []),
+                make(OpCodes.OpJumpNotTruthy, [7]),
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpPop, []),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+    ],
+)
+def test_conditionals(input, expected_constants, expected_instructions):
+    program = parse(input)
+    compiler = Compiler()
+    compiler.compile(program)
+
+    bytecode = compiler.bytecode()
+
+    verify_instructions(bytecode.instructions, flatten(expected_instructions))
+
+    verify_constants(bytecode.constants, expected_constants)

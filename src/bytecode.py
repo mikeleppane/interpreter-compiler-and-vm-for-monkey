@@ -6,7 +6,7 @@ from typing import TypeAlias
 Opcode: TypeAlias = int
 
 
-@dataclass(frozen=True)
+@dataclass
 class Instructions:
     inst: list[int] = field(default_factory=list)
 
@@ -39,8 +39,20 @@ class Instructions:
         self.inst.extend(instruction)
         return position
 
+    def remove(self, position: int) -> None:
+        self.inst = self.inst[:position]
+
+    def replace(self, position: int, new_instructions: list[int]) -> None:
+        self.inst[position : position + len(new_instructions)] = new_instructions
+
     def __getitem__(self, index: int) -> int:
-        return self.inst[index]
+        try:
+            return self.inst[index]
+        except IndexError:
+            print(
+                f"Index is out of bounds when trying to read instruction: given index {index}, instructions size: {len(self)}"
+            )
+            raise
 
     def __len__(self) -> int:
         return len(self.inst)
@@ -69,6 +81,8 @@ class OpCodes(IntEnum):
     OpGreaterThan = auto()
     OpMinus = auto()
     OpBang = auto()
+    OpJumpNotTruthy = auto()
+    OpJump = auto()
 
 
 @dataclass(frozen=True)
@@ -91,6 +105,8 @@ definitions: dict[Opcode, Definition] = {
     OpCodes.OpGreaterThan: Definition("OpGreaterThan", []),
     OpCodes.OpMinus: Definition("OpMinus", []),
     OpCodes.OpBang: Definition("OpBang", []),
+    OpCodes.OpJumpNotTruthy: Definition("OpJumpNotTruthy", [2]),
+    OpCodes.OpJump: Definition("OpJump", [2]),
 }
 
 
