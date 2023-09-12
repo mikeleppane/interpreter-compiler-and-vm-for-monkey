@@ -30,11 +30,6 @@ class Compiler:
         if isinstance(node, Program):
             for statement in node.statements:
                 self.compile(statement)
-            return
-        if isinstance(node, ExpressionStatement):
-            if node.expression is not None:
-                self.compile(node.expression)
-            return
         if isinstance(node, InfixExpression):
             self.compile(node.left)
             self.compile(node.right)
@@ -44,11 +39,12 @@ class Compiler:
                 # case "-":
                 case _:
                     raise CompilationError(f"Error: unknown operator {node.operator}")
-            return
         if isinstance(node, IntegerLiteral):
             integer = Integer(value=node.value)
             self.emit(OpCodes.OpConstant, [self.add_constant(integer)])
-            return
+        if isinstance(node, ExpressionStatement) and node.expression is not None:
+            self.compile(node.expression)
+            self.emit(OpCodes.OpPop, [])
 
     def bytecode(self) -> Bytecode:
         return Bytecode(instructions=self.instructions, constants=self.constants)

@@ -31,6 +31,17 @@ def verify_constants(actual: list[Object], expected: list[Object]) -> None:
                 make(OpCodes.OpConstant, [0]),
                 make(OpCodes.OpConstant, [1]),
                 make(OpCodes.OpAdd, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "1; 2",
+            [1, 2],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpPop, []),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpPop, []),
             ],
         ],
     ],

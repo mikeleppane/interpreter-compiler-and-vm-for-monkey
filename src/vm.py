@@ -1,4 +1,3 @@
-from collections import deque
 from dataclasses import dataclass, field
 from typing import Self
 
@@ -17,24 +16,58 @@ class StackUnderflow(Exception):
     pass
 
 
+class EmptyStackObjectError(Exception):
+    pass
+
+
+@dataclass
+class Stack:
+    store: list[Object | None] = field(default_factory=list)
+    stack_size: int = STACK_SIZE
+    sp: int = 0
+
+    def __post_init__(self) -> None:
+        self.store = [None] * self.stack_size
+
+    def last_popped_stack_elem(self) -> Object | None:
+        return self.store[self.sp]
+
+    def top(self) -> Object | None:
+        if self.sp == 0:
+            return None
+        try:
+            return self.store[self.sp - 1]
+        except IndexError:
+            print("Invalid stack index: {self.sp}, stack size: {len(self.stack)}")
+            raise
+
+    def push(self, obj: Object) -> None:
+        if self.sp >= STACK_SIZE:
+            raise StackOverflow(
+                "Stack overflow: stack size is {STACK_SIZE}, stack pointer is {self.sp}"
+            )
+        self.store[self.sp] = obj
+        self.sp += 1
+
+    def pop(self) -> Object:
+        if self.sp == 0:
+            raise StackUnderflow("stack pointer cannot be negative")
+        obj = self.store[self.sp - 1]
+        if obj is None:
+            raise EmptyStackObjectError("stack object cannot be None")
+        self.sp -= 1
+        return obj
+
+
 @dataclass
 class VM:
     constants: list[Object] = field(default_factory=list)
     instructions: Instructions = field(default_factory=Instructions)
-    stack: deque[Object] = field(default_factory=deque)
+    stack: Stack = field(default_factory=Stack)
     sp: int = 0
 
-    def __post_init__(self) -> None:
-        self.stack = deque(maxlen=STACK_SIZE)
-
-    def stack_top(self) -> Object | None:
-        if self.sp == 0:
-            return None
-        try:
-            return self.stack[self.sp - 1]
-        except IndexError:
-            print("Invalid stack index: {self.sp}, stack size: {len(self.stack)}")
-            raise
+    def last_popped_stack_elem(self) -> Object | None:
+        return self.stack.last_popped_stack_elem()
 
     def run(self) -> None:
         ip = 0
@@ -50,20 +83,14 @@ class VM:
                     left = self.pop()
                     if isinstance(left, Integer) and isinstance(right, Integer):
                         self.push(Integer(value=left.value + right.value))
+                case OpCodes.OpPop:
+                    self.pop()
             ip += 1
 
     def push(self, obj: Object) -> None:
-        if self.sp >= STACK_SIZE:
-            raise StackOverflow(
-                "Stack overflow: stack size is {STACK_SIZE}, stack pointer is {self.sp}"
-            )
-        self.stack.append(obj)
-        self.sp += 1
+        return self.stack.push(obj)
 
     def pop(self) -> Object:
-        if self.sp == 0:
-            raise StackUnderflow("stack pointer cannot be negative")
-        self.sp -= 1
         return self.stack.pop()
 
     @classmethod

@@ -39,7 +39,7 @@ class Repl:
             machine = VM.from_compiler(compiler)
             machine.run()
 
-            stack_top = machine.stack_top()
+            stack_top = machine.last_popped_stack_elem()
             print(stack_top.inspect() if stack_top is not None else "null")
 
     def print_parser_errors(self, errors: list[str]) -> None:

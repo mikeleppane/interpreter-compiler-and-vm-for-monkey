@@ -15,9 +15,10 @@ def run_vm_test(input: str, expected: Any):
         instructions=compiler.bytecode().instructions,
         constants=compiler.bytecode().constants,
     )
-    print(vm)
     vm.run()
-    stack_elem = vm.stack_top()
+    stack_elem = vm.last_popped_stack_elem()
+
+    assert stack_elem is not None
 
     assert stack_elem is not None
 
