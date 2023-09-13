@@ -3,7 +3,7 @@ from typing import Self
 
 from src.bytecode import Instructions, OpCodes
 from src.compiler import Compiler
-from src.object import Boolean, Integer, Object
+from src.object import Boolean, Integer, Null, Object
 
 STACK_SIZE = 2048
 
@@ -22,6 +22,7 @@ class EmptyStackObjectError(Exception):
 
 TRUE = Boolean(value=True)
 FALSE = Boolean(value=False)
+NULL = Null()
 
 
 @dataclass
@@ -96,6 +97,17 @@ class VM:
                     self.execute_bang_operator()
                 case OpCodes.OpMinus:
                     self.execute_minus_operator()
+                case OpCodes.OpJump:
+                    pos = int.from_bytes(self.instructions.inst[ip + 1 : ip + 3], "big")
+                    ip = pos - 1
+                case OpCodes.OpJumpNotTruthy:
+                    pos = int.from_bytes(self.instructions.inst[ip + 1 : ip + 3], "big")
+                    ip += 2
+                    condition = self.pop()
+                    if not self.is_truthy(condition):
+                        ip = pos - 1
+                case OpCodes.OpNull:
+                    self.push(NULL)
             ip += 1
 
     def push(self, obj: Object) -> None:
@@ -165,7 +177,7 @@ class VM:
 
     def execute_bang_operator(self) -> None:
         operand = self.pop()
-        if operand == FALSE:
+        if operand in (FALSE, NULL):
             self.push(TRUE)
             return
         self.push(FALSE)
@@ -175,3 +187,10 @@ class VM:
         if not isinstance(operand, Integer):
             raise TypeError(f"unsupported type for negation: {operand.type()}")
         self.push(Integer(value=-operand.value))
+
+    def is_truthy(self, obj: Object) -> bool:
+        if isinstance(obj, Boolean):
+            return obj.value
+        if obj is NULL:
+            return False
+        return True

@@ -83,6 +83,7 @@ class OpCodes(IntEnum):
     OpBang = auto()
     OpJumpNotTruthy = auto()
     OpJump = auto()
+    OpNull = auto()
 
 
 @dataclass(frozen=True)
@@ -107,6 +108,7 @@ definitions: dict[Opcode, Definition] = {
     OpCodes.OpBang: Definition("OpBang", []),
     OpCodes.OpJumpNotTruthy: Definition("OpJumpNotTruthy", [2]),
     OpCodes.OpJump: Definition("OpJump", [2]),
+    OpCodes.OpNull: Definition("OpNull", []),
 }
 
 

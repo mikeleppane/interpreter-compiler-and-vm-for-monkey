@@ -79,7 +79,24 @@ def test_integer_arithmetic(input: str, expected: Any) -> None:
         ["!!5", True],
         ["(10 + 50 + -5 - 5 * 2 / 2) < (100 - 49)", True],
         ["!!true == false", False],
+        ["!(if (false) { 5; })", True],
     ],
 )
 def test_boolean_expressions(input: str, expected: Any) -> None:
+    run_vm_test(input, expected)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["if (true) { 10 }", 10],
+        ["if (true) { 10 } else { 20 }", 10],
+        ["if (false) { 10 } else { 20 } ", 20],
+        ["if (1) { 10 }", 10],
+        ["if (1 < 2) { 10 }", 10],
+        ["if (1 < 2) { 10 } else { 20 }", 10],
+        ["if ((if (false) { 10 })) { 10 } else { 20 }", 20],
+    ],
+)
+def test_conditionals(input: str, expected: Any) -> None:
     run_vm_test(input, expected)

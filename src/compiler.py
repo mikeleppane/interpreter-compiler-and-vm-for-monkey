@@ -93,18 +93,17 @@ class Compiler:
             self.compile(node.consequence)
             if self.last_instruction.opcode == OpCodes.OpPop:
                 self.remove_last_pop()
+            jump_pos = self.emit(OpCodes.OpJump, [9999])
+            after_consequence_pos = len(self.instructions)
+            self.change_operand(op_jump_not_truthy_pos, after_consequence_pos)
             if node.alternative is None:
-                after_consequence_pos = len(self.instructions)
-                self.change_operand(op_jump_not_truthy_pos, after_consequence_pos)
+                self.emit(OpCodes.OpNull, [])
             else:
-                jump_pos = self.emit(OpCodes.OpJump, [9999])
-                after_consequence_pos = len(self.instructions)
-                self.change_operand(op_jump_not_truthy_pos, after_consequence_pos)
                 self.compile(node.alternative)
                 if self.last_instruction.opcode == OpCodes.OpPop:
                     self.remove_last_pop()
-                after_alternative_pos = len(self.instructions)
-                self.change_operand(jump_pos, after_alternative_pos)
+            after_alternative_pos = len(self.instructions)
+            self.change_operand(jump_pos, after_alternative_pos)
         if isinstance(node, BlockStatement):
             for statement in node.statements:
                 self.compile(statement)

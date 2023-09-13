@@ -207,8 +207,10 @@ def test_boolean_expressions(input, expected_constants, expected_instructions):
             [10, 3333],
             [
                 make(OpCodes.OpTrue, []),
-                make(OpCodes.OpJumpNotTruthy, [7]),
+                make(OpCodes.OpJumpNotTruthy, [10]),
                 make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpJump, [11]),
+                make(OpCodes.OpNull, []),
                 make(OpCodes.OpPop, []),
                 make(OpCodes.OpConstant, [1]),
                 make(OpCodes.OpPop, []),
