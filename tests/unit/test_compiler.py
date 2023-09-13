@@ -214,6 +214,20 @@ def test_boolean_expressions(input, expected_constants, expected_instructions):
                 make(OpCodes.OpPop, []),
             ],
         ],
+        [
+            "if (true) { 10 } else { 20 }; 3333;",
+            [10, 20, 3333],
+            [
+                make(OpCodes.OpTrue, []),
+                make(OpCodes.OpJumpNotTruthy, [10]),
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpJump, [13]),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpPop, []),
+                make(OpCodes.OpConstant, [2]),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
     ],
 )
 def test_conditionals(input, expected_constants, expected_instructions):
