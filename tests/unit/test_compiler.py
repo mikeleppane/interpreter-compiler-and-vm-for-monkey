@@ -3,7 +3,7 @@ import pytest
 from src.bytecode import Instructions, OpCodes, make
 from src.compiler import CompilationError, Compiler
 from src.object import Object
-from tests.helper import flatten, parse, verify_integer_object
+from tests.helper import flatten, parse, verify_integer_object, verify_string_object
 
 
 def verify_instructions(actual: Instructions, expected: list[int]) -> None:
@@ -19,6 +19,8 @@ def verify_constants(actual: list[Object], expected: list[Object]) -> None:
     for index, constant in enumerate(expected):
         if isinstance(constant, int):
             verify_integer_object(actual[index], constant)
+        if isinstance(constant, str):
+            verify_string_object(actual[index], constant)
 
 
 @pytest.mark.parametrize(
@@ -315,3 +317,38 @@ def test_global_let_statements_compile_error(
     compiler = Compiler()
     with pytest.raises(CompilationError):
         compiler.compile(program)
+
+
+@pytest.mark.parametrize(
+    "input,expected_constants,expected_instructions",
+    [
+        [
+            '"monkey"',
+            ["monkey"],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            '"mon" + "key"',
+            ["mon", "key"],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpAdd, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+    ],
+)
+def test_string_expressions(input, expected_constants, expected_instructions):
+    program = parse(input)
+    compiler = Compiler()
+    compiler.compile(program)
+
+    bytecode = compiler.bytecode()
+
+    verify_instructions(bytecode.instructions, flatten(expected_instructions))
+
+    verify_constants(bytecode.constants, expected_constants)

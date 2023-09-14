@@ -113,3 +113,15 @@ def test_conditionals(input: str, expected: Any) -> None:
 )
 def test_global_let_statements(input: str, expected: Any) -> None:
     run_vm_test(input, expected)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ['"monkey"', "monkey"],
+        ['"mon" + "key"', "monkey"],
+        ['"mon" + "key" + "banana"', "monkeybanana"],
+    ],
+)
+def test_string_expressions(input: str, expected: Any) -> None:
+    run_vm_test(input, expected)

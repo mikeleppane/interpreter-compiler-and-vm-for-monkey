@@ -3,7 +3,7 @@ from typing import Self
 
 from src.bytecode import Instructions, OpCodes
 from src.compiler import Compiler
-from src.object import Boolean, Integer, Null, Object
+from src.object import Boolean, Integer, Null, Object, String
 
 STACK_SIZE = 2048
 GLOBALS_SIZE = 65536
@@ -164,9 +164,18 @@ class VM:
     def execute_binary_operation(self, opcode: OpCodes) -> None:
         right = self.pop()
         left = self.pop()
-        if not isinstance(left, Integer) or not isinstance(right, Integer):
-            raise TypeError("operands must be integers")
-        self.execute_integer_operation(opcode, left, right)
+        if isinstance(left, Integer) and isinstance(right, Integer):
+            self.execute_integer_operation(opcode, left, right)
+            return
+        if isinstance(left, String) and isinstance(right, String):
+            self.execute_string_operation(opcode, left, right)
+            return
+        raise TypeError(f"unsupported types for binary operation: {left.type} {right.type}")
+
+    def execute_string_operation(self, opcode: OpCodes, left: String, right: String) -> None:
+        if opcode != OpCodes.OpAdd:
+            raise TypeError(f"unknown string operation: {opcode}")
+        self.push(String(value=left.value + right.value))
 
     def execute_integer_operation(self, opcode: OpCodes, left: Integer, right: Integer) -> None:
         match opcode:

@@ -14,8 +14,9 @@ from src.libast import (
     Node,
     PrefixExpression,
     Program,
+    StringLiteral,
 )
-from src.object import Integer, Object
+from src.object import Integer, Object, String
 from src.symbol_table import SymbolNotDefinedError, SymbolTable
 
 
@@ -126,6 +127,9 @@ class Compiler:
             except SymbolNotDefinedError:
                 raise CompilationError(f"Error: identifier not found: {node.value}") from None
             self.emit(OpCodes.OpGetGlobal, [symbol.index])
+        if isinstance(node, StringLiteral):
+            string = String(value=node.value)
+            self.emit(OpCodes.OpConstant, [self.add_constant(string)])
 
     def bytecode(self) -> Bytecode:
         return Bytecode(instructions=self.instructions, constants=self.constants)
