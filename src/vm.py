@@ -6,6 +6,7 @@ from src.compiler import Compiler
 from src.object import Boolean, Integer, Null, Object
 
 STACK_SIZE = 2048
+GLOBALS_SIZE = 65536
 
 
 class StackOverflow(Exception):
@@ -17,6 +18,10 @@ class StackUnderflow(Exception):
 
 
 class EmptyStackObjectError(Exception):
+    pass
+
+
+class GetGlobalIndexError(Exception):
     pass
 
 
@@ -65,11 +70,32 @@ class Stack:
 
 
 @dataclass
+class Globals:
+    store: list[Object | None] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        self.store = [None] * GLOBALS_SIZE
+
+    def __setitem__(self, index: int, obj: Object) -> None:
+        self.store[index] = obj
+
+    def __getitem__(self, index: int) -> Object | None:
+        return self.store[index]
+
+
+@dataclass
 class VM:
     constants: list[Object] = field(default_factory=list)
     instructions: Instructions = field(default_factory=Instructions)
     stack: Stack = field(default_factory=Stack)
     sp: int = 0
+    globals: Globals = field(default_factory=Globals)
+
+    @classmethod
+    def with_new_state(cls, c: Compiler, globals: Globals) -> Self:
+        vm = cls.from_compiler(compiler=c)
+        vm.globals = globals
+        return vm
 
     def last_popped_stack_elem(self) -> Object | None:
         return self.stack.last_popped_stack_elem()
@@ -108,6 +134,18 @@ class VM:
                         ip = pos - 1
                 case OpCodes.OpNull:
                     self.push(NULL)
+                case OpCodes.OpSetGlobal:
+                    global_index = int.from_bytes(self.instructions.inst[ip + 1 : ip + 3], "big")
+                    ip += 2
+                    self.globals[global_index] = self.pop()
+                case OpCodes.OpGetGlobal:
+                    global_index = int.from_bytes(self.instructions.inst[ip + 1 : ip + 3], "big")
+                    ip += 2
+                    obj = self.globals[global_index]
+                    if obj is None:
+                        raise GetGlobalIndexError(f"global at index {global_index} is None")
+                    self.push(obj)
+
             ip += 1
 
     def push(self, obj: Object) -> None:

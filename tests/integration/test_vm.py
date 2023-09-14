@@ -100,3 +100,16 @@ def test_boolean_expressions(input: str, expected: Any) -> None:
 )
 def test_conditionals(input: str, expected: Any) -> None:
     run_vm_test(input, expected)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["let one = 1; one", 1],
+        ["let one = 1; let two = 2; one + two", 3],
+        ["let one = 1; let two = one + one; one + two", 3],
+        ["let one = 15; let two = one + one + one; let three = one + two + 5", 65],
+    ],
+)
+def test_global_let_statements(input: str, expected: Any) -> None:
+    run_vm_test(input, expected)

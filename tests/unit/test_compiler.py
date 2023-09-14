@@ -1,9 +1,8 @@
 import pytest
 
 from src.bytecode import Instructions, OpCodes, make
-from src.compiler import Compiler
+from src.compiler import CompilationError, Compiler
 from src.object import Object
-from src.symbol_table import SymbolNotDefinedError
 from tests.helper import flatten, parse, verify_integer_object
 
 
@@ -314,5 +313,5 @@ def test_global_let_statements_compile_error(
 ):
     program = parse(input)
     compiler = Compiler()
-    with pytest.raises(SymbolNotDefinedError, match="Symbol not defined: two"):
+    with pytest.raises(CompilationError):
         compiler.compile(program)

@@ -1,10 +1,10 @@
 import getpass
 
-from src.compiler import CompilationError, Compiler
+from src.compiler import CompilationError, Compiler, SymbolTable
 from src.lexer import Lexer
 from src.libparser import Parser
-from src.object import Environment
-from src.vm import VM
+from src.object import Environment, Object
+from src.vm import VM, Globals
 
 """
 # to use tree-walking interpreter:
@@ -18,6 +18,10 @@ print(evaluated.inspect())
 class Repl:
     def run(self) -> None:
         Environment()
+        constants: list[Object] = []
+        globals = Globals()
+        symbol_table = SymbolTable()
+
         while True:
             print(">> ", end="")
             line = input()
@@ -29,14 +33,14 @@ class Repl:
             if len(parser.errors) > 0:
                 self.print_parser_errors(parser.errors)
                 continue
-            compiler = Compiler()
+            compiler = Compiler.with_new_state(symbol_table, constants)
             try:
                 compiler.compile(program)
             except CompilationError as e:
                 print("Woops! Compilation failed:")
                 print(e)
                 continue
-            machine = VM.from_compiler(compiler)
+            machine = VM.with_new_state(compiler, globals)
             machine.run()
 
             stack_top = machine.last_popped_stack_elem()

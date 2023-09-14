@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Self
 
 from src.bytecode import Instructions, OpCodes, make
 from src.libast import (
@@ -15,7 +16,7 @@ from src.libast import (
     Program,
 )
 from src.object import Integer, Object
-from src.symbol_table import SymbolTable
+from src.symbol_table import SymbolNotDefinedError, SymbolTable
 
 
 class CompilationError(Exception):
@@ -41,6 +42,10 @@ class Compiler:
     last_instruction: EmittedInstruction = field(default_factory=EmittedInstruction)
     previous_instruction: EmittedInstruction = field(default_factory=EmittedInstruction)
     symbol_table: SymbolTable = field(default_factory=SymbolTable)
+
+    @classmethod
+    def with_new_state(cls, s: SymbolTable, constants: list[Object]) -> Self:
+        return cls(symbol_table=s, constants=constants)
 
     def compile(self, node: Node) -> None:  # noqa: C901
         if isinstance(node, Program):
@@ -116,7 +121,10 @@ class Compiler:
             symbol = self.symbol_table.define(node.name.value)
             self.emit(OpCodes.OpSetGlobal, [symbol.index])
         if isinstance(node, Identifier):
-            symbol = self.symbol_table.resolve(node.value)
+            try:
+                symbol = self.symbol_table.resolve(node.value)
+            except SymbolNotDefinedError:
+                raise CompilationError(f"Error: identifier not found: {node.value}") from None
             self.emit(OpCodes.OpGetGlobal, [symbol.index])
 
     def bytecode(self) -> Bytecode:
