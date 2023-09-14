@@ -5,14 +5,17 @@ from src.libast import (
     BlockStatement,
     Boolean,
     ExpressionStatement,
+    Identifier,
     IfExpression,
     InfixExpression,
     IntegerLiteral,
+    LetStatement,
     Node,
     PrefixExpression,
     Program,
 )
 from src.object import Integer, Object
+from src.symbol_table import SymbolTable
 
 
 class CompilationError(Exception):
@@ -37,6 +40,7 @@ class Compiler:
     constants: list[Object] = field(default_factory=list)
     last_instruction: EmittedInstruction = field(default_factory=EmittedInstruction)
     previous_instruction: EmittedInstruction = field(default_factory=EmittedInstruction)
+    symbol_table: SymbolTable = field(default_factory=SymbolTable)
 
     def compile(self, node: Node) -> None:  # noqa: C901
         if isinstance(node, Program):
@@ -107,6 +111,13 @@ class Compiler:
         if isinstance(node, BlockStatement):
             for statement in node.statements:
                 self.compile(statement)
+        if isinstance(node, LetStatement) and node.value is not None:
+            self.compile(node.value)
+            symbol = self.symbol_table.define(node.name.value)
+            self.emit(OpCodes.OpSetGlobal, [symbol.index])
+        if isinstance(node, Identifier):
+            symbol = self.symbol_table.resolve(node.value)
+            self.emit(OpCodes.OpGetGlobal, [symbol.index])
 
     def bytecode(self) -> Bytecode:
         return Bytecode(instructions=self.instructions, constants=self.constants)

@@ -3,6 +3,7 @@ import pytest
 from src.bytecode import Instructions, OpCodes, make
 from src.compiler import Compiler
 from src.object import Object
+from src.symbol_table import SymbolNotDefinedError
 from tests.helper import flatten, parse, verify_integer_object
 
 
@@ -242,3 +243,76 @@ def test_conditionals(input, expected_constants, expected_instructions):
     verify_instructions(bytecode.instructions, flatten(expected_instructions))
 
     verify_constants(bytecode.constants, expected_constants)
+
+
+@pytest.mark.parametrize(
+    "input,expected_constants,expected_instructions",
+    [
+        [
+            "let one = 1;let two = 2;",
+            [1, 2],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpSetGlobal, [0]),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpSetGlobal, [1]),
+            ],
+        ],
+        [
+            "let one = 1;one",
+            [1],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpSetGlobal, [0]),
+                make(OpCodes.OpGetGlobal, [0]),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "let one = 1;let two = one; two",
+            [1],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpSetGlobal, [0]),
+                make(OpCodes.OpGetGlobal, [0]),
+                make(OpCodes.OpSetGlobal, [1]),
+                make(OpCodes.OpGetGlobal, [1]),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+    ],
+)
+def test_global_let_statements(input, expected_constants, expected_instructions):
+    program = parse(input)
+    compiler = Compiler()
+    compiler.compile(program)
+
+    bytecode = compiler.bytecode()
+
+    verify_instructions(bytecode.instructions, flatten(expected_instructions))
+
+    verify_constants(bytecode.constants, expected_constants)
+
+
+@pytest.mark.parametrize(
+    "input,expected_constants,expected_instructions",
+    [
+        [
+            "let one = 1;two;",
+            [1],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpSetGlobal, [0]),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpSetGlobal, [1]),
+            ],
+        ],
+    ],
+)
+def test_global_let_statements_compile_error(
+    input, expected_constants, expected_instructions
+):
+    program = parse(input)
+    compiler = Compiler()
+    with pytest.raises(SymbolNotDefinedError, match="Symbol not defined: two"):
+        compiler.compile(program)

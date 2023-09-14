@@ -84,6 +84,8 @@ class OpCodes(IntEnum):
     OpJumpNotTruthy = auto()
     OpJump = auto()
     OpNull = auto()
+    OpSetGlobal = auto()
+    OpGetGlobal = auto()
 
 
 @dataclass(frozen=True)
@@ -109,6 +111,8 @@ definitions: dict[Opcode, Definition] = {
     OpCodes.OpJumpNotTruthy: Definition("OpJumpNotTruthy", [2]),
     OpCodes.OpJump: Definition("OpJump", [2]),
     OpCodes.OpNull: Definition("OpNull", []),
+    OpCodes.OpSetGlobal: Definition("OpSetGlobal", [2]),
+    OpCodes.OpGetGlobal: Definition("OpGetGlobal", [2]),
 }
 
 
