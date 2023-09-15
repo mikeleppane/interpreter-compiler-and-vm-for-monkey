@@ -125,3 +125,15 @@ def test_global_let_statements(input: str, expected: Any) -> None:
 )
 def test_string_expressions(input: str, expected: Any) -> None:
     run_vm_test(input, expected)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["[]", []],
+        ["[1, 2, 3]", [1, 2, 3]],
+        ["[1 + 2, 3 * 4, 5 + 6]", [3, 12, 11]],
+    ],
+)
+def test_array_literals(input: str, expected: Any) -> None:
+    run_vm_test(input, expected)

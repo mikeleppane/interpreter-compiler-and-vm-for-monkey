@@ -3,6 +3,7 @@ from typing import Self
 
 from src.bytecode import Instructions, OpCodes, make
 from src.libast import (
+    ArrayLiteral,
     BlockStatement,
     Boolean,
     ExpressionStatement,
@@ -130,6 +131,10 @@ class Compiler:
         if isinstance(node, StringLiteral):
             string = String(value=node.value)
             self.emit(OpCodes.OpConstant, [self.add_constant(string)])
+        if isinstance(node, ArrayLiteral):
+            for elem in node.elements:
+                self.compile(elem)
+            self.emit(OpCodes.OpArray, [len(node.elements)])
 
     def bytecode(self) -> Bytecode:
         return Bytecode(instructions=self.instructions, constants=self.constants)

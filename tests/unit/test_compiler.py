@@ -352,3 +352,56 @@ def test_string_expressions(input, expected_constants, expected_instructions):
     verify_instructions(bytecode.instructions, flatten(expected_instructions))
 
     verify_constants(bytecode.constants, expected_constants)
+
+
+@pytest.mark.parametrize(
+    "input,expected_constants,expected_instructions",
+    [
+        [
+            "[]",
+            [],
+            [
+                make(OpCodes.OpArray, [0]),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "[1, 2, 3]",
+            [1, 2, 3],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpConstant, [2]),
+                make(OpCodes.OpArray, [3]),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "[1 + 2, 3 - 4, 5 * 6]",
+            [1, 2, 3, 4, 5, 6],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpAdd, []),
+                make(OpCodes.OpConstant, [2]),
+                make(OpCodes.OpConstant, [3]),
+                make(OpCodes.OpSub, []),
+                make(OpCodes.OpConstant, [4]),
+                make(OpCodes.OpConstant, [5]),
+                make(OpCodes.OpMul, []),
+                make(OpCodes.OpArray, [3]),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+    ],
+)
+def test_array_literals(input, expected_constants, expected_instructions):
+    program = parse(input)
+    compiler = Compiler()
+    compiler.compile(program)
+
+    bytecode = compiler.bytecode()
+
+    verify_instructions(bytecode.instructions, flatten(expected_instructions))
+
+    verify_constants(bytecode.constants, expected_constants)

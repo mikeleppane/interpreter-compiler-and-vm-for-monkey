@@ -4,7 +4,7 @@ from typing import Any
 from src.lexer import Lexer
 from src.libast import Program
 from src.libparser import Parser
-from src.object import Boolean, Integer, Object, String
+from src.object import Array, Boolean, Integer, Object, String
 
 
 def flatten(to_be_flatten: list[list[int]]) -> list[int]:
@@ -31,6 +31,18 @@ def verify_expected_object(actual: Object, expected: Any) -> None:
     if isinstance(expected, str):
         verify_string_object(actual, expected)
         return
+    if isinstance(expected, list):
+        verify_list_object(actual, expected)
+        return
+
+
+def verify_list_object(actual: Object, expected: list) -> None:
+    assert isinstance(actual, Array)
+
+    assert len(actual.elements) == len(expected)
+
+    for i, element in enumerate(actual.elements):
+        verify_expected_object(element, expected[i])
 
 
 def verify_boolean_object(actual: Object, expected: bool) -> None:

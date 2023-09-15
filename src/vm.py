@@ -3,7 +3,7 @@ from typing import Self
 
 from src.bytecode import Instructions, OpCodes
 from src.compiler import Compiler
-from src.object import Boolean, Integer, Null, Object, String
+from src.object import Array, Boolean, Integer, Null, Object, String
 
 STACK_SIZE = 2048
 GLOBALS_SIZE = 65536
@@ -88,7 +88,6 @@ class VM:
     constants: list[Object] = field(default_factory=list)
     instructions: Instructions = field(default_factory=Instructions)
     stack: Stack = field(default_factory=Stack)
-    sp: int = 0
     globals: Globals = field(default_factory=Globals)
 
     @classmethod
@@ -145,6 +144,17 @@ class VM:
                     if obj is None:
                         raise GetGlobalIndexError(f"global at index {global_index} is None")
                     self.push(obj)
+                case OpCodes.OpArray:
+                    array_length = int.from_bytes(self.instructions.inst[ip + 1 : ip + 3], "big")
+                    ip += 2
+                    elements = self.stack.store[self.stack.sp - array_length : self.stack.sp]
+                    if not all(elements):
+                        raise EmptyStackObjectError(
+                            f"array elements cannot be None: {elements} in range {self.stack.sp - array_length} to {self.stack.sp}"
+                        )
+                    array = Array(elements=elements)  # type: ignore[arg-type]
+                    self.stack.sp -= array_length
+                    self.push(array)
 
             ip += 1
 
