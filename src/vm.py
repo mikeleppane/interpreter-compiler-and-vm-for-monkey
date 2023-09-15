@@ -1,27 +1,36 @@
+from collections.abc import Hashable
 from dataclasses import dataclass, field
 from typing import Self
 
 from src.bytecode import Instructions, OpCodes
 from src.compiler import Compiler
-from src.object import Array, Boolean, Integer, Null, Object, String
+from src.object import Array, Boolean, Hash, HashPair, Integer, Null, Object, String
 
 STACK_SIZE = 2048
 GLOBALS_SIZE = 65536
 
 
-class StackOverflow(Exception):
+class VmError(Exception):
     pass
 
 
-class StackUnderflow(Exception):
+class StackOverflow(VmError):
     pass
 
 
-class EmptyStackObjectError(Exception):
+class StackUnderflow(VmError):
     pass
 
 
-class GetGlobalIndexError(Exception):
+class EmptyStackObjectError(VmError):
+    pass
+
+
+class InvalidHashKeyError(VmError):
+    pass
+
+
+class GetGlobalIndexError(VmError):
     pass
 
 
@@ -155,8 +164,49 @@ class VM:
                     array = Array(elements=elements)  # type: ignore[arg-type]
                     self.stack.sp -= array_length
                     self.push(array)
+                case OpCodes.OpHash:
+                    hash_length = int.from_bytes(self.instructions.inst[ip + 1 : ip + 3], "big")
+                    ip += 2
+                    pairs: dict[Hashable, HashPair] = {}
+                    for i in range(self.stack.sp - hash_length, self.stack.sp, 2):
+                        key = self.stack.store[i]
+                        value = self.stack.store[i + 1]
+                        if (
+                            isinstance(key, Object)
+                            and isinstance(key, Hashable)
+                            and value is not None
+                        ):
+                            pairs[key] = HashPair(key=key, value=value)
+                        else:
+                            raise InvalidHashKeyError(f"unsupported hash key: {key}")
+                    self.stack.sp -= hash_length
+                    self.push(Hash(pairs=pairs))
+                case OpCodes.OpIndex:
+                    index = self.pop()
+                    left = self.pop()
+                    if isinstance(left, Array) and isinstance(index, Integer):
+                        self.execute_array_index(left, index)
+                    elif isinstance(left, Hash):
+                        self.execute_hash_index(left, index)
+                    else:
+                        raise TypeError(f"index operator not supported: {left.type()}")
 
             ip += 1
+
+    def execute_array_index(self, left: Array, index: Integer) -> None:
+        if index.value < 0 or index.value >= len(left.elements):
+            self.push(NULL)
+            return
+        self.push(left.elements[index.value])
+
+    def execute_hash_index(self, left: Hash, index: Object) -> None:
+        if not isinstance(index, Hashable):
+            raise InvalidHashKeyError(f"unusable as hash key: {index.type()}")
+        pair = left.pairs.get(index)
+        if pair is None:
+            self.push(NULL)
+            return
+        self.push(pair.value)
 
     def push(self, obj: Object) -> None:
         return self.stack.push(obj)

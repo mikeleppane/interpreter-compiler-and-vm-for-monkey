@@ -7,8 +7,10 @@ from src.libast import (
     BlockStatement,
     Boolean,
     ExpressionStatement,
+    HashLiteral,
     Identifier,
     IfExpression,
+    IndexExpression,
     InfixExpression,
     IntegerLiteral,
     LetStatement,
@@ -135,6 +137,15 @@ class Compiler:
             for elem in node.elements:
                 self.compile(elem)
             self.emit(OpCodes.OpArray, [len(node.elements)])
+        if isinstance(node, HashLiteral):
+            for key, value in node.pairs.items():
+                self.compile(key)
+                self.compile(value)
+            self.emit(OpCodes.OpHash, [len(node.pairs) * 2])
+        if isinstance(node, IndexExpression):
+            self.compile(node.left)
+            self.compile(node.index)
+            self.emit(OpCodes.OpIndex, [])
 
     def bytecode(self) -> Bytecode:
         return Bytecode(instructions=self.instructions, constants=self.constants)

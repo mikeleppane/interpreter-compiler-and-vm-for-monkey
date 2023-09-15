@@ -1,7 +1,7 @@
 from collections.abc import Hashable
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Protocol, Self, TypeAlias
+from typing import Protocol, Self, TypeAlias, runtime_checkable
 
 from src.libast import BlockStatement, Identifier
 
@@ -21,6 +21,7 @@ class OBJECT_TYPE(StrEnum):
     HASH_OBJ = "HASH"
 
 
+@runtime_checkable
 class Object(Protocol):
     def type(self) -> ObjectType:
         ...
@@ -43,6 +44,7 @@ class Integer(Object, Hashable):
         return super().__hash__()
 
 
+@runtime_checkable
 class BuiltinFunction(Protocol):
     def __call__(
         self,

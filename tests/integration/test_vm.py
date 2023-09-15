@@ -3,6 +3,7 @@ from typing import Any
 import pytest
 
 from src.compiler import Compiler
+from src.object import Null
 from src.vm import VM
 from tests.helper import parse, verify_expected_object
 
@@ -136,4 +137,35 @@ def test_string_expressions(input: str, expected: Any) -> None:
     ],
 )
 def test_array_literals(input: str, expected: Any) -> None:
+    run_vm_test(input, expected)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["{}", {}],
+        ["{1: 2, 2: 3}", {1: 2, 2: 3}],
+        ["{1 + 1: 2 * 2, 3 + 3: 4 * 4}", {2: 4, 6: 16}],
+    ],
+)
+def test_hash_literals(input: str, expected: Any) -> None:
+    run_vm_test(input, expected)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["[1,2,3][1]", 2],
+        ["[1,2,3][0 + 2]", 3],
+        ["[[1,2,3]][0][0]", 1],
+        ["[][0]", Null],
+        ["[1,2,3][99]", Null],
+        ["[1][-1]", Null],
+        ["{1: 1, 2: 2}[1]", 1],
+        ["{1: 1, 2: 2}[2]", 2],
+        ["{1: 1}[0]", Null],
+        ["{}[0]", Null],
+    ],
+)
+def test_index_expressions(input: str, expected: Any) -> None:
     run_vm_test(input, expected)

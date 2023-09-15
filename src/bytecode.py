@@ -87,6 +87,8 @@ class OpCodes(IntEnum):
     OpSetGlobal = auto()
     OpGetGlobal = auto()
     OpArray = auto()
+    OpHash = auto()
+    OpIndex = auto()
 
 
 @dataclass(frozen=True)
@@ -115,6 +117,8 @@ definitions: dict[Opcode, Definition] = {
     OpCodes.OpSetGlobal: Definition("OpSetGlobal", [2]),
     OpCodes.OpGetGlobal: Definition("OpGetGlobal", [2]),
     OpCodes.OpArray: Definition("OpArray", [2]),
+    OpCodes.OpHash: Definition("OpHash", [2]),
+    OpCodes.OpIndex: Definition("OpIndex", []),
 }
 
 
