@@ -89,6 +89,9 @@ class OpCodes(IntEnum):
     OpArray = auto()
     OpHash = auto()
     OpIndex = auto()
+    OpCall = auto()
+    OpReturnValue = auto()
+    OpReturn = auto()
 
 
 @dataclass(frozen=True)
@@ -119,6 +122,9 @@ definitions: dict[Opcode, Definition] = {
     OpCodes.OpArray: Definition("OpArray", [2]),
     OpCodes.OpHash: Definition("OpHash", [2]),
     OpCodes.OpIndex: Definition("OpIndex", []),
+    OpCodes.OpCall: Definition("OpCall", []),
+    OpCodes.OpReturnValue: Definition("OpReturnValue", []),
+    OpCodes.OpReturn: Definition("OpReturn", []),
 }
 
 

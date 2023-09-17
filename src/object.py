@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Protocol, Self, TypeAlias, runtime_checkable
 
+from src.bytecode import Instructions
 from src.libast import BlockStatement, Identifier
 
 ObjectType: TypeAlias = str
@@ -19,6 +20,7 @@ class OBJECT_TYPE(StrEnum):
     BUILTIN_OBJ = "BUILTIN"
     ARRAY_OBJ = "ARRAY"
     HASH_OBJ = "HASH"
+    COMPILED_FUNCTION_OBJ = "COMPILED_FUNCTION"
 
 
 @runtime_checkable
@@ -210,3 +212,14 @@ class Hash(Object, Hashable):
 
     def __hash__(self) -> int:
         return super().__hash__()
+
+
+@dataclass(frozen=True)
+class CompiledFunction(Object):
+    instructions: Instructions
+
+    def type(self) -> ObjectType:
+        return OBJECT_TYPE.COMPILED_FUNCTION_OBJ
+
+    def inspect(self) -> str:
+        return f"CompiledFunction[{hex(id(self))}]"

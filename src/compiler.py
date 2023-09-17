@@ -7,6 +7,7 @@ from src.libast import (
     BlockStatement,
     Boolean,
     ExpressionStatement,
+    FunctionLiteral,
     HashLiteral,
     Identifier,
     IfExpression,
@@ -17,9 +18,10 @@ from src.libast import (
     Node,
     PrefixExpression,
     Program,
+    ReturnStatement,
     StringLiteral,
 )
-from src.object import Integer, Object, String
+from src.object import CompiledFunction, Integer, Object, String
 from src.symbol_table import SymbolNotDefinedError, SymbolTable
 
 
@@ -40,16 +42,48 @@ class EmittedInstruction:
 
 
 @dataclass
-class Compiler:
+class CompilationScope:
     instructions: Instructions = field(default_factory=Instructions)
-    constants: list[Object] = field(default_factory=list)
     last_instruction: EmittedInstruction = field(default_factory=EmittedInstruction)
     previous_instruction: EmittedInstruction = field(default_factory=EmittedInstruction)
+
+    def emit(self, opcode: OpCodes, operands: list[int]) -> int:
+        instruction = make(opcode, operands)
+        pos = self.instructions.add(instruction)
+        self.set_last_instruction(opcode, pos)
+        return pos
+
+    def set_last_instruction(self, opcode: OpCodes, position: int) -> None:
+        self.previous_instruction = self.last_instruction
+        self.last_instruction = EmittedInstruction(opcode, position)
+
+    def remove_last_pop(self) -> None:
+        if self.last_instruction.position:
+            self.instructions.remove(self.last_instruction.position)
+        self.last_instruction = self.previous_instruction
+
+    def change_operand(self, op_pos: int, operand: int) -> None:
+        op = OpCodes(self.instructions[op_pos])
+        new_inst = make(op, [operand])
+        self.instructions.replace(op_pos, new_inst)
+
+
+@dataclass
+class Compiler:
+    constants: list[Object] = field(default_factory=list)
     symbol_table: SymbolTable = field(default_factory=SymbolTable)
+    scopes: list[CompilationScope] = field(default_factory=list)
+    scope_index: int = 0
+
+    def __post_init__(self) -> None:
+        self.scopes.append(CompilationScope())
 
     @classmethod
     def with_new_state(cls, s: SymbolTable, constants: list[Object]) -> Self:
         return cls(symbol_table=s, constants=constants)
+
+    def current_instructions(self) -> Instructions:
+        return self.scopes[self.scope_index].instructions
 
     def compile(self, node: Node) -> None:  # noqa: C901
         if isinstance(node, Program):
@@ -104,18 +138,18 @@ class Compiler:
             self.compile(node.condition)
             op_jump_not_truthy_pos = self.emit(OpCodes.OpJumpNotTruthy, [9999])
             self.compile(node.consequence)
-            if self.last_instruction.opcode == OpCodes.OpPop:
+            if self.is_last_instruction_pop():
                 self.remove_last_pop()
             jump_pos = self.emit(OpCodes.OpJump, [9999])
-            after_consequence_pos = len(self.instructions)
+            after_consequence_pos = len(self.current_instructions())
             self.change_operand(op_jump_not_truthy_pos, after_consequence_pos)
             if node.alternative is None:
                 self.emit(OpCodes.OpNull, [])
             else:
                 self.compile(node.alternative)
-                if self.last_instruction.opcode == OpCodes.OpPop:
+                if self.is_last_instruction_pop():
                     self.remove_last_pop()
-            after_alternative_pos = len(self.instructions)
+            after_alternative_pos = len(self.current_instructions())
             self.change_operand(jump_pos, after_alternative_pos)
         if isinstance(node, BlockStatement):
             for statement in node.statements:
@@ -146,9 +180,32 @@ class Compiler:
             self.compile(node.left)
             self.compile(node.index)
             self.emit(OpCodes.OpIndex, [])
+        if isinstance(node, FunctionLiteral):
+            self.enter_scope()
+            self.compile(node.body)
+
+            instructions = self.leave_scope()
+            compiled_fn = CompiledFunction(instructions=instructions)
+            self.emit(opcode=OpCodes.OpConstant, operands=[self.add_constant(compiled_fn)])
+        if isinstance(node, ReturnStatement) and node.return_value:
+            self.compile(node.return_value)
+            self.emit(OpCodes.OpReturnValue, [])
 
     def bytecode(self) -> Bytecode:
-        return Bytecode(instructions=self.instructions, constants=self.constants)
+        return Bytecode(
+            instructions=self.current_instructions(),
+            constants=self.constants,
+        )
+
+    def enter_scope(self) -> None:
+        self.scopes.append(CompilationScope())
+        self.scope_index += 1
+
+    def leave_scope(self) -> Instructions:
+        instructions = self.current_instructions()
+        self.scopes.pop()
+        self.scope_index -= 1
+        return instructions
 
     def add_constant(self, obj: Object) -> int:
         self.constants.append(obj)
@@ -156,20 +213,28 @@ class Compiler:
 
     def emit(self, opcode: OpCodes, operands: list[int]) -> int:
         instruction = make(opcode, operands)
-        pos = self.instructions.add(instruction)
+        pos = self.current_instructions().add(instruction)
         self.set_last_instruction(opcode, pos)
         return pos
 
     def set_last_instruction(self, opcode: OpCodes, position: int) -> None:
-        self.previous_instruction = self.last_instruction
-        self.last_instruction = EmittedInstruction(opcode, position)
+        self.scopes[self.scope_index].previous_instruction = self.scopes[
+            self.scope_index
+        ].last_instruction
+        self.scopes[self.scope_index].last_instruction = EmittedInstruction(opcode, position)
+
+    def is_last_instruction_pop(self) -> bool:
+        return self.scopes[self.scope_index].last_instruction.opcode == OpCodes.OpPop
 
     def remove_last_pop(self) -> None:
-        if self.last_instruction.position:
-            self.instructions.remove(self.last_instruction.position)
-        self.last_instruction = self.previous_instruction
+        pos = self.scopes[self.scope_index].last_instruction.position
+        if pos:
+            self.current_instructions().remove(pos)
+        self.scopes[self.scope_index].last_instruction = self.scopes[
+            self.scope_index
+        ].previous_instruction
 
     def change_operand(self, op_pos: int, operand: int) -> None:
-        op = OpCodes(self.instructions[op_pos])
+        op = OpCodes(self.current_instructions()[op_pos])
         new_inst = make(op, [operand])
-        self.instructions.replace(op_pos, new_inst)
+        self.current_instructions().replace(op_pos, new_inst)

@@ -2,7 +2,7 @@ import pytest
 
 from src.bytecode import Instructions, OpCodes, make
 from src.compiler import CompilationError, Compiler
-from src.object import Object
+from src.object import CompiledFunction, Object
 from tests.helper import flatten, parse, verify_integer_object, verify_string_object
 
 
@@ -21,6 +21,9 @@ def verify_constants(actual: list[Object], expected: list[Object]) -> None:
             verify_integer_object(actual[index], constant)
         if isinstance(constant, str):
             verify_string_object(actual[index], constant)
+        if isinstance(constant, list):
+            assert isinstance(actual[index], CompiledFunction)
+            verify_instructions(actual[index].instructions, flatten(constant))
 
 
 @pytest.mark.parametrize(
@@ -497,6 +500,75 @@ def test_hash_literals(input, expected_constants, expected_instructions):
     ],
 )
 def test_index_expressions(input, expected_constants, expected_instructions):
+    program = parse(input)
+    compiler = Compiler()
+    compiler.compile(program)
+
+    bytecode = compiler.bytecode()
+
+    verify_instructions(bytecode.instructions, flatten(expected_instructions))
+
+    verify_constants(bytecode.constants, expected_constants)
+
+
+def test_compiler_scopes():
+    compiler = Compiler()
+    assert compiler.scope_index == 0
+
+    compiler.emit(OpCodes.OpMul, [])
+
+    compiler.enter_scope()
+
+    assert compiler.scope_index == 1
+
+    compiler.emit(OpCodes.OpSub, [])
+
+    assert len(compiler.scopes[compiler.scope_index].instructions) == 1
+
+    last = compiler.scopes[compiler.scope_index].last_instruction
+
+    assert last.opcode == OpCodes.OpSub
+
+    compiler.leave_scope()
+
+    assert compiler.scope_index == 0
+
+    compiler.emit(OpCodes.OpAdd, [])
+
+    assert len(compiler.scopes[compiler.scope_index].instructions) == 2
+
+    last = compiler.scopes[compiler.scope_index].last_instruction
+
+    assert last.opcode == OpCodes.OpAdd
+
+    previous = compiler.scopes[compiler.scope_index].previous_instruction
+
+    assert previous.opcode == OpCodes.OpMul
+
+
+@pytest.mark.parametrize(
+    "input,expected_constants,expected_instructions",
+    [
+        [
+            "fn() { return 5 + 10 }",
+            [
+                5,
+                10,
+                [
+                    make(OpCodes.OpConstant, [0]),
+                    make(OpCodes.OpConstant, [1]),
+                    make(OpCodes.OpAdd, []),
+                    make(OpCodes.OpReturnValue, []),
+                ],
+            ],
+            [
+                make(OpCodes.OpConstant, [2]),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+    ],
+)
+def test_functions(input, expected_constants, expected_instructions):
     program = parse(input)
     compiler = Compiler()
     compiler.compile(program)
