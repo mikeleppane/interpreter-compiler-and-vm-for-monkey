@@ -2,12 +2,24 @@ from collections.abc import Hashable
 from dataclasses import dataclass, field
 from typing import Self
 
-from src.bytecode import Instructions, OpCodes
+from src.bytecode import OpCodes
 from src.compiler import Compiler
-from src.object import Array, Boolean, Hash, HashPair, Integer, Null, Object, String
+from src.frame import Frame
+from src.object import (
+    Array,
+    Boolean,
+    CompiledFunction,
+    Hash,
+    HashPair,
+    Integer,
+    Null,
+    Object,
+    String,
+)
 
 STACK_SIZE = 2048
 GLOBALS_SIZE = 65536
+MAX_FRAMES = 1024
 
 
 class VmError(Exception):
@@ -23,6 +35,10 @@ class StackUnderflow(VmError):
 
 
 class EmptyStackObjectError(VmError):
+    pass
+
+
+class EmptyFrameError(VmError):
     pass
 
 
@@ -95,9 +111,27 @@ class Globals:
 @dataclass
 class VM:
     constants: list[Object] = field(default_factory=list)
-    instructions: Instructions = field(default_factory=Instructions)
     stack: Stack = field(default_factory=Stack)
     globals: Globals = field(default_factory=Globals)
+    frames: list[Frame | None] = field(default_factory=list)
+    frame_index: int = 0
+
+    def current_frame(self) -> Frame:
+        frame = self.frames[self.frame_index - 1]
+        if frame is not None:
+            return frame
+        raise EmptyFrameError("Frame cannot be None")
+
+    def push_frame(self, frame: Frame) -> None:
+        self.frames[self.frame_index] = frame
+        self.frame_index += 1
+
+    def pop_frame(self) -> Frame:
+        self.frame_index -= 1
+        frame = self.frames[self.frame_index]
+        if frame is not None:
+            return frame
+        raise EmptyFrameError("Frame cannot be None")
 
     @classmethod
     def with_new_state(cls, c: Compiler, globals: Globals) -> Self:
@@ -108,23 +142,26 @@ class VM:
     def last_popped_stack_elem(self) -> Object | None:
         return self.stack.last_popped_stack_elem()
 
-    def run(self) -> None:
+    def run(self) -> None:  # noqa: C901
         ip = 0
-        while ip < len(self.instructions):
-            opcode = OpCodes(self.instructions[ip])
+        while self.current_frame().ip < len(self.current_frame().instructions()) - 1:
+            self.current_frame().ip += 1
+            ip = self.current_frame().ip
+            ins = self.current_frame().instructions().inst
+            opcode = OpCodes(ins[ip])
             match opcode:
                 case OpCodes.OpConstant:
-                    const_index = int.from_bytes(self.instructions.inst[ip + 1 : ip + 3], "big")
-                    ip += 2
-                    self.push(self.constants[const_index])
+                    const_index = int.from_bytes(ins[ip + 1 : ip + 3], "big")
+                    self.current_frame().ip += 2
+                    self.stack.push(self.constants[const_index])
                 case OpCodes.OpAdd | OpCodes.OpSub | OpCodes.OpMul | OpCodes.OpDiv:
                     self.execute_binary_operation(opcode)
                 case OpCodes.OpPop:
-                    self.pop()
+                    self.stack.pop()
                 case OpCodes.OpTrue:
-                    self.push(TRUE)
+                    self.stack.push(TRUE)
                 case OpCodes.OpFalse:
-                    self.push(FALSE)
+                    self.stack.push(FALSE)
                 case OpCodes.OpEqual | OpCodes.OpNotEqual | OpCodes.OpGreaterThan:
                     self.execute_comparison(opcode)
                 case OpCodes.OpBang:
@@ -132,30 +169,30 @@ class VM:
                 case OpCodes.OpMinus:
                     self.execute_minus_operator()
                 case OpCodes.OpJump:
-                    pos = int.from_bytes(self.instructions.inst[ip + 1 : ip + 3], "big")
-                    ip = pos - 1
+                    pos = int.from_bytes(ins[ip + 1 : ip + 3], "big")
+                    self.current_frame().ip = pos - 1
                 case OpCodes.OpJumpNotTruthy:
-                    pos = int.from_bytes(self.instructions.inst[ip + 1 : ip + 3], "big")
-                    ip += 2
-                    condition = self.pop()
+                    pos = int.from_bytes(ins[ip + 1 : ip + 3], "big")
+                    self.current_frame().ip += 2
+                    condition = self.stack.pop()
                     if not self.is_truthy(condition):
-                        ip = pos - 1
+                        self.current_frame().ip = pos - 1
                 case OpCodes.OpNull:
-                    self.push(NULL)
+                    self.stack.push(NULL)
                 case OpCodes.OpSetGlobal:
-                    global_index = int.from_bytes(self.instructions.inst[ip + 1 : ip + 3], "big")
-                    ip += 2
-                    self.globals[global_index] = self.pop()
+                    global_index = int.from_bytes(ins[ip + 1 : ip + 3], "big")
+                    self.current_frame().ip += 2
+                    self.globals[global_index] = self.stack.pop()
                 case OpCodes.OpGetGlobal:
-                    global_index = int.from_bytes(self.instructions.inst[ip + 1 : ip + 3], "big")
-                    ip += 2
+                    global_index = int.from_bytes(ins[ip + 1 : ip + 3], "big")
+                    self.current_frame().ip += 2
                     obj = self.globals[global_index]
                     if obj is None:
                         raise GetGlobalIndexError(f"global at index {global_index} is None")
-                    self.push(obj)
+                    self.stack.push(obj)
                 case OpCodes.OpArray:
-                    array_length = int.from_bytes(self.instructions.inst[ip + 1 : ip + 3], "big")
-                    ip += 2
+                    array_length = int.from_bytes(ins[ip + 1 : ip + 3], "big")
+                    self.current_frame().ip += 2
                     elements = self.stack.store[self.stack.sp - array_length : self.stack.sp]
                     if not all(elements):
                         raise EmptyStackObjectError(
@@ -163,10 +200,10 @@ class VM:
                         )
                     array = Array(elements=elements)  # type: ignore[arg-type]
                     self.stack.sp -= array_length
-                    self.push(array)
+                    self.stack.push(array)
                 case OpCodes.OpHash:
-                    hash_length = int.from_bytes(self.instructions.inst[ip + 1 : ip + 3], "big")
-                    ip += 2
+                    hash_length = int.from_bytes(ins[ip + 1 : ip + 3], "big")
+                    self.current_frame().ip += 2
                     pairs: dict[Hashable, HashPair] = {}
                     for i in range(self.stack.sp - hash_length, self.stack.sp, 2):
                         key = self.stack.store[i]
@@ -180,50 +217,57 @@ class VM:
                         else:
                             raise InvalidHashKeyError(f"unsupported hash key: {key}")
                     self.stack.sp -= hash_length
-                    self.push(Hash(pairs=pairs))
+                    self.stack.push(Hash(pairs=pairs))
                 case OpCodes.OpIndex:
-                    index = self.pop()
-                    left = self.pop()
+                    index = self.stack.pop()
+                    left = self.stack.pop()
                     if isinstance(left, Array) and isinstance(index, Integer):
                         self.execute_array_index(left, index)
                     elif isinstance(left, Hash):
                         self.execute_hash_index(left, index)
                     else:
                         raise TypeError(f"index operator not supported: {left.type()}")
+                case OpCodes.OpCall:
+                    fn = self.stack.store[self.stack.sp - 1]
+                    if not isinstance(fn, CompiledFunction):
+                        raise AssertionError("calling non-function")
+                    self.push_frame(Frame(fn=fn))
+                case OpCodes.OpReturnValue:
+                    rv = self.stack.pop()
+                    self.pop_frame()
+                    self.stack.pop()
+                    self.stack.push(rv)
 
             ip += 1
 
     def execute_array_index(self, left: Array, index: Integer) -> None:
         if index.value < 0 or index.value >= len(left.elements):
-            self.push(NULL)
+            self.stack.push(NULL)
             return
-        self.push(left.elements[index.value])
+        self.stack.push(left.elements[index.value])
 
     def execute_hash_index(self, left: Hash, index: Object) -> None:
         if not isinstance(index, Hashable):
             raise InvalidHashKeyError(f"unusable as hash key: {index.type()}")
         pair = left.pairs.get(index)
         if pair is None:
-            self.push(NULL)
+            self.stack.push(NULL)
             return
-        self.push(pair.value)
-
-    def push(self, obj: Object) -> None:
-        return self.stack.push(obj)
-
-    def pop(self) -> Object:
-        return self.stack.pop()
+        self.stack.push(pair.value)
 
     @classmethod
     def from_compiler(cls, compiler: Compiler) -> Self:
-        return cls(
-            instructions=compiler.bytecode().instructions,
-            constants=compiler.bytecode().constants,
+        main_fn = CompiledFunction(instructions=compiler.bytecode().instructions)
+        main_frame = Frame(
+            fn=main_fn,
         )
+        frames: list[Frame | None] = [None] * MAX_FRAMES
+        frames[0] = main_frame
+        return cls(constants=compiler.bytecode().constants, frames=frames, frame_index=1)
 
     def execute_binary_operation(self, opcode: OpCodes) -> None:
-        right = self.pop()
-        left = self.pop()
+        right = self.stack.pop()
+        left = self.stack.pop()
         if isinstance(left, Integer) and isinstance(right, Integer):
             self.execute_integer_operation(opcode, left, right)
             return
@@ -235,65 +279,65 @@ class VM:
     def execute_string_operation(self, opcode: OpCodes, left: String, right: String) -> None:
         if opcode != OpCodes.OpAdd:
             raise TypeError(f"unknown string operation: {opcode}")
-        self.push(String(value=left.value + right.value))
+        self.stack.push(String(value=left.value + right.value))
 
     def execute_integer_operation(self, opcode: OpCodes, left: Integer, right: Integer) -> None:
         match opcode:
             case OpCodes.OpAdd:
-                self.push(Integer(value=left.value + right.value))
+                self.stack.push(Integer(value=left.value + right.value))
                 return
             case OpCodes.OpSub:
-                self.push(Integer(value=left.value - right.value))
+                self.stack.push(Integer(value=left.value - right.value))
                 return
             case OpCodes.OpMul:
-                self.push(Integer(value=left.value * right.value))
+                self.stack.push(Integer(value=left.value * right.value))
                 return
             case OpCodes.OpDiv:
-                self.push(Integer(value=left.value // right.value))
+                self.stack.push(Integer(value=left.value // right.value))
                 return
             case _:
                 raise TypeError("unknown integer operation: {opcode}")
 
     def execute_comparison(self, opcode: OpCodes) -> None:
-        right = self.pop()
-        left = self.pop()
+        right = self.stack.pop()
+        left = self.stack.pop()
         if isinstance(left, Integer) and isinstance(right, Integer):
             self.execute_integer_comparison(opcode, left, right)
             return
         match opcode:
             case OpCodes.OpEqual:
-                self.push(TRUE if left == right else FALSE)
+                self.stack.push(TRUE if left == right else FALSE)
             case OpCodes.OpNotEqual:
-                self.push(TRUE if left != right else FALSE)
+                self.stack.push(TRUE if left != right else FALSE)
             case _:
                 raise TypeError(f"unknown operator: {opcode} ({left.type} {right.type})")
 
     def execute_integer_comparison(self, opcode: OpCodes, left: Integer, right: Integer) -> None:
         match opcode:
             case OpCodes.OpEqual:
-                self.push(TRUE if left.value == right.value else FALSE)
+                self.stack.push(TRUE if left.value == right.value else FALSE)
                 return
             case OpCodes.OpNotEqual:
-                self.push(TRUE if left.value != right.value else FALSE)
+                self.stack.push(TRUE if left.value != right.value else FALSE)
                 return
             case OpCodes.OpGreaterThan:
-                self.push(TRUE if left.value > right.value else FALSE)
+                self.stack.push(TRUE if left.value > right.value else FALSE)
                 return
             case _:
                 raise TypeError("unknown integer comparison: {opcode}")
 
     def execute_bang_operator(self) -> None:
-        operand = self.pop()
+        operand = self.stack.pop()
         if operand in (FALSE, NULL):
-            self.push(TRUE)
+            self.stack.push(TRUE)
             return
-        self.push(FALSE)
+        self.stack.push(FALSE)
 
     def execute_minus_operator(self) -> None:
-        operand = self.pop()
+        operand = self.stack.pop()
         if not isinstance(operand, Integer):
             raise TypeError(f"unsupported type for negation: {operand.type()}")
-        self.push(Integer(value=-operand.value))
+        self.stack.push(Integer(value=-operand.value))
 
     def is_truthy(self, obj: Object) -> bool:
         if isinstance(obj, Boolean):

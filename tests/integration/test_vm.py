@@ -12,10 +12,7 @@ def run_vm_test(input: str, expected: Any):
     program = parse(input)
     compiler = Compiler()
     compiler.compile(program)
-    vm = VM(
-        instructions=compiler.bytecode().instructions,
-        constants=compiler.bytecode().constants,
-    )
+    vm = VM.from_compiler(compiler=compiler)
     vm.run()
     stack_elem = vm.last_popped_stack_elem()
 
@@ -168,4 +165,27 @@ def test_hash_literals(input: str, expected: Any) -> None:
     ],
 )
 def test_index_expressions(input: str, expected: Any) -> None:
+    run_vm_test(input, expected)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["let fivePlusTen = fn() { 5 + 10; }; fivePlusTen()", 15],
+        ["let one = fn() { 1; };let two = fn() { 2; };one() + two()", 3],
+        ["let a = fn() { 1 };let b = fn() { a() + 1 };let c = fn() { b() + 1 };c()", 3],
+    ],
+)
+def test_calling_functions_without_arguments(input: str, expected: Any) -> None:
+    run_vm_test(input, expected)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["let earlyExit = fn() { return 99; 100; };earlyExit()", 99],
+        ["let earlyExit = fn() { return 99; return 100; };earlyExit()", 99],
+    ],
+)
+def test_functions_with_return_statements(input: str, expected: Any) -> None:
     run_vm_test(input, expected)

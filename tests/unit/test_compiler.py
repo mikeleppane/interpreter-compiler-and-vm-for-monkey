@@ -566,9 +566,87 @@ def test_compiler_scopes():
                 make(OpCodes.OpPop, []),
             ],
         ],
+        [
+            "fn() { 1; 2}",
+            [
+                1,
+                2,
+                [
+                    make(OpCodes.OpConstant, [0]),
+                    make(OpCodes.OpPop, []),
+                    make(OpCodes.OpConstant, [1]),
+                    make(OpCodes.OpReturnValue, []),
+                ],
+            ],
+            [
+                make(OpCodes.OpConstant, [2]),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "fn() { }",
+            [
+                [
+                    make(OpCodes.OpReturn, []),
+                ],
+            ],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
     ],
 )
 def test_functions(input, expected_constants, expected_instructions):
+    program = parse(input)
+    compiler = Compiler()
+    compiler.compile(program)
+
+    bytecode = compiler.bytecode()
+
+    verify_instructions(bytecode.instructions, flatten(expected_instructions))
+
+    verify_constants(bytecode.constants, expected_constants)
+
+
+@pytest.mark.parametrize(
+    "input,expected_constants,expected_instructions",
+    [
+        [
+            "fn() { 24 }();",
+            [
+                24,
+                [
+                    make(OpCodes.OpConstant, [0]),
+                    make(OpCodes.OpReturnValue, []),
+                ],
+            ],
+            [
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpCall, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "let noArg = fn() { 24 };noArg();",
+            [
+                24,
+                [
+                    make(OpCodes.OpConstant, [0]),
+                    make(OpCodes.OpReturnValue, []),
+                ],
+            ],
+            [
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpSetGlobal, [0]),
+                make(OpCodes.OpGetGlobal, [0]),
+                make(OpCodes.OpCall, []),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+    ],
+)
+def test_function_calls(input, expected_constants, expected_instructions):
     program = parse(input)
     compiler = Compiler()
     compiler.compile(program)

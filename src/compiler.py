@@ -6,6 +6,7 @@ from src.libast import (
     ArrayLiteral,
     BlockStatement,
     Boolean,
+    CallExpression,
     ExpressionStatement,
     FunctionLiteral,
     HashLiteral,
@@ -35,7 +36,7 @@ class Bytecode:
     constants: list[Object]
 
 
-@dataclass(frozen=True)
+@dataclass
 class EmittedInstruction:
     opcode: OpCodes | None = None
     position: int | None = None
@@ -138,7 +139,7 @@ class Compiler:
             self.compile(node.condition)
             op_jump_not_truthy_pos = self.emit(OpCodes.OpJumpNotTruthy, [9999])
             self.compile(node.consequence)
-            if self.is_last_instruction_pop():
+            if self.is_last_instruction(OpCodes.OpPop):
                 self.remove_last_pop()
             jump_pos = self.emit(OpCodes.OpJump, [9999])
             after_consequence_pos = len(self.current_instructions())
@@ -147,7 +148,7 @@ class Compiler:
                 self.emit(OpCodes.OpNull, [])
             else:
                 self.compile(node.alternative)
-                if self.is_last_instruction_pop():
+                if self.is_last_instruction(OpCodes.OpPop):
                     self.remove_last_pop()
             after_alternative_pos = len(self.current_instructions())
             self.change_operand(jump_pos, after_alternative_pos)
@@ -184,12 +185,21 @@ class Compiler:
             self.enter_scope()
             self.compile(node.body)
 
+            if self.is_last_instruction(OpCodes.OpPop):
+                self.replace_last_pop_with_return()
+
+            if not self.is_last_instruction(OpCodes.OpReturnValue):
+                self.emit(OpCodes.OpReturn, [])
+
             instructions = self.leave_scope()
             compiled_fn = CompiledFunction(instructions=instructions)
             self.emit(opcode=OpCodes.OpConstant, operands=[self.add_constant(compiled_fn)])
         if isinstance(node, ReturnStatement) and node.return_value:
             self.compile(node.return_value)
             self.emit(OpCodes.OpReturnValue, [])
+        if isinstance(node, CallExpression):
+            self.compile(node.function)
+            self.emit(OpCodes.OpCall, [])
 
     def bytecode(self) -> Bytecode:
         return Bytecode(
@@ -223,8 +233,10 @@ class Compiler:
         ].last_instruction
         self.scopes[self.scope_index].last_instruction = EmittedInstruction(opcode, position)
 
-    def is_last_instruction_pop(self) -> bool:
-        return self.scopes[self.scope_index].last_instruction.opcode == OpCodes.OpPop
+    def is_last_instruction(self, op: OpCodes) -> bool:
+        if len(self.current_instructions()) == 0:
+            return False
+        return self.scopes[self.scope_index].last_instruction.opcode == op
 
     def remove_last_pop(self) -> None:
         pos = self.scopes[self.scope_index].last_instruction.position
@@ -238,3 +250,9 @@ class Compiler:
         op = OpCodes(self.current_instructions()[op_pos])
         new_inst = make(op, [operand])
         self.current_instructions().replace(op_pos, new_inst)
+
+    def replace_last_pop_with_return(self) -> None:
+        last_pos = self.scopes[self.scope_index].last_instruction.position
+        if last_pos is not None:
+            self.current_instructions().replace(last_pos, make(OpCodes.OpReturnValue, []))
+            self.scopes[self.scope_index].last_instruction.opcode = OpCodes.OpReturnValue
