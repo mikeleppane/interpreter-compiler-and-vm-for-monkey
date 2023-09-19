@@ -237,6 +237,10 @@ class VM:
                     self.pop_frame()
                     self.stack.pop()
                     self.stack.push(rv)
+                case OpCodes.OpReturn:
+                    self.pop_frame()
+                    self.stack.pop()
+                    self.stack.push(NULL)
 
             ip += 1
 

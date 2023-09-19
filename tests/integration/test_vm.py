@@ -189,3 +189,30 @@ def test_calling_functions_without_arguments(input: str, expected: Any) -> None:
 )
 def test_functions_with_return_statements(input: str, expected: Any) -> None:
     run_vm_test(input, expected)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ["let noReturn = fn() { };noReturn();", Null],
+        [
+            "let noReturn = fn() { };let noReturnTwo = fn() { noReturn(); };noReturn();noReturnTwo();",
+            Null,
+        ],
+    ],
+)
+def test_functions_without_return_value(input: str, expected: Any) -> None:
+    run_vm_test(input, expected)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        [
+            "let returnsOne = fn() { 1; };let returnsOneReturner = fn() { returnsOne; };returnsOneReturner()();",
+            1,
+        ],
+    ],
+)
+def test_first_class_functions(input: str, expected: Any) -> None:
+    run_vm_test(input, expected)
