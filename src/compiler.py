@@ -190,6 +190,10 @@ class Compiler:
             self.emit(OpCodes.OpIndex, [])
         if isinstance(node, FunctionLiteral):
             self.enter_scope()
+
+            for p in node.parameters:
+                self.symbol_table.define(p.value)
+
             self.compile(node.body)
 
             if self.is_last_instruction(OpCodes.OpPop):
@@ -200,14 +204,20 @@ class Compiler:
 
             num_of_locals = self.symbol_table.num_definitions
             instructions = self.leave_scope()
-            compiled_fn = CompiledFunction(instructions=instructions, num_of_locals=num_of_locals)
+            compiled_fn = CompiledFunction(
+                instructions=instructions,
+                num_of_locals=num_of_locals,
+                num_of_parameters=len(node.parameters),
+            )
             self.emit(opcode=OpCodes.OpConstant, operands=[self.add_constant(compiled_fn)])
         if isinstance(node, ReturnStatement) and node.return_value:
             self.compile(node.return_value)
             self.emit(OpCodes.OpReturnValue, [])
         if isinstance(node, CallExpression):
             self.compile(node.function)
-            self.emit(OpCodes.OpCall, [])
+            for arg in node.arguments:
+                self.compile(arg)
+            self.emit(OpCodes.OpCall, [len(node.arguments)])
 
     def bytecode(self) -> Bytecode:
         return Bytecode(

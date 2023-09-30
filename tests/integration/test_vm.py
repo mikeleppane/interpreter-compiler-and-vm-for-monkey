@@ -249,3 +249,61 @@ def test_first_class_functions(input: str, expected: Any) -> None:
 )
 def test_calling_functions_with_bindings(input: str, expected: Any) -> None:
     run_vm_test(input, expected)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        [
+            "let identity = fn(a) { a; };identity(4);",
+            4,
+        ],
+        [
+            "let sum = fn(a, b) { a + b; };sum(1, 2);",
+            3,
+        ],
+        [
+            "let sum = fn(a, b) {let c = a + b;c;};sum(1, 2);",
+            3,
+        ],
+        [
+            "let sum = fn(a, b) {let c = a + b;c;};sum(1, 2) + sum(3, 4);",
+            10,
+        ],
+        [
+            "let sum = fn(a, b) {let c = a + b;c;};let outer = fn() {sum(1, 2) + sum(3, 4);};outer();",
+            10,
+        ],
+        [
+            "let globalNum = 10;let sum = fn(a, b) {let c = a + b;c + globalNum;};let outer = fn() {sum(1, 2) + sum(3, 4) + globalNum;};outer() + globalNum;",
+            50,
+        ],
+    ],
+)
+def test_calling_functions_with_arguments_and_bindings(
+    input: str, expected: Any
+) -> None:
+    run_vm_test(input, expected)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        [
+            "fn() { 1; }(1);",
+            "wrong number of arguments: want=0, got=1",
+        ],
+        [
+            "fn(a) { a; }();",
+            "wrong number of arguments: want=1, got=0",
+        ],
+        [
+            "fn(a, b) { a + b; }(1);",
+            "wrong number of arguments: want=2, got=1",
+        ],
+    ],
+)
+def test_calling_functions_with_wrong_arguments(input: str, expected: Any) -> None:
+    with pytest.raises(RuntimeError) as excinfo:
+        run_vm_test(input, expected)
+    assert expected in str(excinfo.value)

@@ -228,10 +228,16 @@ class VM:
                     else:
                         raise TypeError(f"index operator not supported: {left.type()}")
                 case OpCodes.OpCall:
-                    fn = self.stack.store[self.stack.sp - 1]
+                    num_of_args = int.from_bytes(ins[ip + 1 : ip + 2], "big")
+                    self.current_frame().ip += 1
+                    fn = self.stack.store[self.stack.sp - 1 - num_of_args]
                     if not isinstance(fn, CompiledFunction):
-                        raise AssertionError("calling non-function")
-                    frame = Frame(fn=fn, base_pointer=self.stack.sp)
+                        raise RuntimeError(f"calling non-function: type: {type(fn)}, value: {fn}")
+                    if fn.num_of_parameters != num_of_args:
+                        raise RuntimeError(
+                            f"wrong number of arguments: want={fn.num_of_parameters}, got={num_of_args}"
+                        )
+                    frame = Frame(fn=fn, base_pointer=self.stack.sp - num_of_args)
                     self.push_frame(frame)
                     self.stack.sp = frame.base_pointer + fn.num_of_locals
                 case OpCodes.OpReturnValue:
@@ -276,7 +282,11 @@ class VM:
 
     @classmethod
     def from_compiler(cls, compiler: Compiler) -> Self:
-        main_fn = CompiledFunction(instructions=compiler.bytecode().instructions, num_of_locals=0)
+        main_fn = CompiledFunction(
+            instructions=compiler.bytecode().instructions,
+            num_of_locals=0,
+            num_of_parameters=0,
+        )
         main_frame = Frame(fn=main_fn, base_pointer=0)
         frames: list[Frame | None] = [None] * MAX_FRAMES
         frames[0] = main_frame

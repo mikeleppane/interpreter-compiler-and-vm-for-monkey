@@ -124,7 +124,7 @@ definitions: dict[Opcode, Definition] = {
     OpCodes.OpArray: Definition("OpArray", [2]),
     OpCodes.OpHash: Definition("OpHash", [2]),
     OpCodes.OpIndex: Definition("OpIndex", []),
-    OpCodes.OpCall: Definition("OpCall", []),
+    OpCodes.OpCall: Definition("OpCall", [1]),
     OpCodes.OpReturnValue: Definition("OpReturnValue", []),
     OpCodes.OpReturn: Definition("OpReturn", []),
     OpCodes.OpGetLocal: Definition("OpGetLocal", [1]),

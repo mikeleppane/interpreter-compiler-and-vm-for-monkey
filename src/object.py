@@ -218,6 +218,7 @@ class Hash(Object, Hashable):
 class CompiledFunction(Object):
     instructions: Instructions
     num_of_locals: int
+    num_of_parameters: int
 
     def type(self) -> ObjectType:
         return OBJECT_TYPE.COMPILED_FUNCTION_OBJ
