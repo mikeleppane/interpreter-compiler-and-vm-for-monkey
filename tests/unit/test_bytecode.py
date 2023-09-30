@@ -15,6 +15,14 @@ from tests.helper import flatten
             make(OpCodes.OpAdd, []),
             [OpCodes.OpAdd],
         ],
+        [
+            make(OpCodes.OpConstant, [65535]),
+            [OpCodes.OpConstant, 255, 255],
+        ],
+        [
+            make(OpCodes.OpGetLocal, [255]),
+            [OpCodes.OpGetLocal, 255],
+        ],
     ],
 )
 def test_make(instructions: list[int], expected: list[int]) -> None:
@@ -28,19 +36,26 @@ def test_instruction_string():
         inst=flatten(
             [
                 make(OpCodes.OpAdd, []),
+                make(OpCodes.OpGetLocal, [1]),
                 make(OpCodes.OpConstant, [2]),
                 make(OpCodes.OpConstant, [65535]),
             ]
         )
     )
-    expected = """0000 OpAdd 
-0001 OpConstant 2
-0004 OpConstant 65535"""
+    expected = """0000 OpAdd
+                  0001 OpGetLocal 1
+                  0003 OpConstant 2
+                  0006 OpConstant 65535"""
 
-    print(instructions.to_string())
-    print(expected)
+    actual_lines = [
+        line.strip() for line in instructions.to_string().split("\n") if line
+    ]
+    expected_lines = [line.strip() for line in expected.split("\n") if line]
 
-    assert instructions.to_string().strip() == expected.strip()
+    assert all(
+        actual == expected
+        for actual, expected in zip(actual_lines, expected_lines, strict=True)
+    )
 
 
 @pytest.mark.parametrize(
@@ -50,6 +65,11 @@ def test_instruction_string():
             OpCodes.OpConstant,
             [65535],
             2,
+        ],
+        [
+            OpCodes.OpGetLocal,
+            [255],
+            1,
         ],
     ],
 )

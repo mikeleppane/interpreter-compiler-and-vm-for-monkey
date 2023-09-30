@@ -23,7 +23,7 @@ from src.libast import (
     StringLiteral,
 )
 from src.object import CompiledFunction, Integer, Object, String
-from src.symbol_table import SymbolNotDefinedError, SymbolTable
+from src.symbol_table import SymbolScope, SymbolTable
 
 
 class CompilationError(Exception):
@@ -158,13 +158,20 @@ class Compiler:
         if isinstance(node, LetStatement) and node.value is not None:
             self.compile(node.value)
             symbol = self.symbol_table.define(node.name.value)
-            self.emit(OpCodes.OpSetGlobal, [symbol.index])
+            match symbol.scope:
+                case SymbolScope.GLOBAL:
+                    self.emit(OpCodes.OpSetGlobal, [symbol.index])
+                case SymbolScope.LOCAL:
+                    self.emit(OpCodes.OpSetLocal, [symbol.index])
         if isinstance(node, Identifier):
-            try:
-                symbol = self.symbol_table.resolve(node.value)
-            except SymbolNotDefinedError:
+            maybe_symbol = self.symbol_table.resolve(node.value)
+            if maybe_symbol is None:
                 raise CompilationError(f"Error: identifier not found: {node.value}") from None
-            self.emit(OpCodes.OpGetGlobal, [symbol.index])
+            match maybe_symbol.scope:
+                case SymbolScope.GLOBAL:
+                    self.emit(OpCodes.OpGetGlobal, [maybe_symbol.index])
+                case SymbolScope.LOCAL:
+                    self.emit(OpCodes.OpGetLocal, [maybe_symbol.index])
         if isinstance(node, StringLiteral):
             string = String(value=node.value)
             self.emit(OpCodes.OpConstant, [self.add_constant(string)])
@@ -210,11 +217,14 @@ class Compiler:
     def enter_scope(self) -> None:
         self.scopes.append(CompilationScope())
         self.scope_index += 1
+        self.symbol_table = SymbolTable.enclosed_by(self.symbol_table)
 
     def leave_scope(self) -> Instructions:
         instructions = self.current_instructions()
         self.scopes.pop()
         self.scope_index -= 1
+        if self.symbol_table.outer:
+            self.symbol_table = self.symbol_table.outer
         return instructions
 
     def add_constant(self, obj: Object) -> int:

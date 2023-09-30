@@ -656,3 +656,73 @@ def test_function_calls(input, expected_constants, expected_instructions):
     verify_instructions(bytecode.instructions, flatten(expected_instructions))
 
     verify_constants(bytecode.constants, expected_constants)
+
+
+@pytest.mark.parametrize(
+    "input,expected_constants,expected_instructions",
+    [
+        [
+            "let num = 55;fn() { num }",
+            [
+                55,
+                [
+                    make(OpCodes.OpGetGlobal, [0]),
+                    make(OpCodes.OpReturnValue, []),
+                ],
+            ],
+            [
+                make(OpCodes.OpConstant, [0]),
+                make(OpCodes.OpSetGlobal, [0]),
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "fn() {let num = 55; num}",
+            [
+                55,
+                [
+                    make(OpCodes.OpConstant, [0]),
+                    make(OpCodes.OpSetLocal, [0]),
+                    make(OpCodes.OpGetLocal, [0]),
+                    make(OpCodes.OpReturnValue, []),
+                ],
+            ],
+            [
+                make(OpCodes.OpConstant, [1]),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+        [
+            "fn() {let a = 55;let b = 77; a + b}",
+            [
+                55,
+                77,
+                [
+                    make(OpCodes.OpConstant, [0]),
+                    make(OpCodes.OpSetLocal, [0]),
+                    make(OpCodes.OpConstant, [1]),
+                    make(OpCodes.OpSetLocal, [1]),
+                    make(OpCodes.OpGetLocal, [0]),
+                    make(OpCodes.OpGetLocal, [1]),
+                    make(OpCodes.OpAdd, []),
+                    make(OpCodes.OpReturnValue, []),
+                ],
+            ],
+            [
+                make(OpCodes.OpConstant, [2]),
+                make(OpCodes.OpPop, []),
+            ],
+        ],
+    ],
+)
+def test_let_statement_scopes(input, expected_constants, expected_instructions):
+    program = parse(input)
+    compiler = Compiler()
+    compiler.compile(program)
+
+    bytecode = compiler.bytecode()
+
+    verify_instructions(bytecode.instructions, flatten(expected_instructions))
+
+    verify_constants(bytecode.constants, expected_constants)

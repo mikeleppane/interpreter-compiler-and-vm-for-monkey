@@ -92,6 +92,8 @@ class OpCodes(IntEnum):
     OpCall = auto()
     OpReturnValue = auto()
     OpReturn = auto()
+    OpGetLocal = auto()
+    OpSetLocal = auto()
 
 
 @dataclass(frozen=True)
@@ -125,6 +127,8 @@ definitions: dict[Opcode, Definition] = {
     OpCodes.OpCall: Definition("OpCall", []),
     OpCodes.OpReturnValue: Definition("OpReturnValue", []),
     OpCodes.OpReturn: Definition("OpReturn", []),
+    OpCodes.OpGetLocal: Definition("OpGetLocal", [1]),
+    OpCodes.OpSetLocal: Definition("OpSetLocal", [1]),
 }
 
 
@@ -139,7 +143,11 @@ def make(op: Opcode, operands: list[int]) -> list[int]:
 
     instruction = op.to_bytes()
     for i, operand in enumerate(operands):
-        instruction += operand.to_bytes(definition.operand_widths[i], "big")
+        match definition.operand_widths[i]:
+            case 2:
+                instruction += operand.to_bytes(definition.operand_widths[i], "big")
+            case 1:
+                instruction += operand.to_bytes(definition.operand_widths[i], "big")
     return list(instruction)
 
 

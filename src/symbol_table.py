@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import Self
 
 
 class SymbolNotDefinedError(Exception):
@@ -22,18 +23,25 @@ class Symbol:
 
 @dataclass
 class SymbolTable:
+    outer: Self | None = None
     store: dict[str, Symbol] = field(default_factory=dict)
     num_definitions: int = 0
 
+    @classmethod
+    def enclosed_by(cls, outer: Self) -> Self:
+        return cls(outer=outer)
+
     def define(self, name: str) -> Symbol:
-        symbol = Symbol(name=name, scope=SymbolScope.GLOBAL, index=self.num_definitions)
+        if self.outer is None:
+            symbol = Symbol(name=name, scope=SymbolScope.GLOBAL, index=self.num_definitions)
+        else:
+            symbol = Symbol(name=name, scope=SymbolScope.LOCAL, index=self.num_definitions)
         self.store[name] = symbol
         self.num_definitions += 1
         return symbol
 
-    def resolve(self, name: str) -> Symbol:
-        try:
-            return self.store[name]
-        except KeyError:
-            message = f"Symbol not defined: {name}"
-            raise SymbolNotDefinedError(message) from None
+    def resolve(self, name: str) -> Symbol | None:
+        symbol = self.store.get(name)
+        if symbol is None and self.outer is not None:
+            return self.outer.resolve(name)
+        return symbol
