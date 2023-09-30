@@ -231,16 +231,31 @@ class VM:
                     fn = self.stack.store[self.stack.sp - 1]
                     if not isinstance(fn, CompiledFunction):
                         raise AssertionError("calling non-function")
-                    self.push_frame(Frame(fn=fn))
+                    frame = Frame(fn=fn, base_pointer=self.stack.sp)
+                    self.push_frame(frame)
+                    self.stack.sp = frame.base_pointer + fn.num_of_locals
                 case OpCodes.OpReturnValue:
                     rv = self.stack.pop()
-                    self.pop_frame()
-                    self.stack.pop()
+                    frame = self.pop_frame()
+                    self.stack.sp = frame.base_pointer - 1
                     self.stack.push(rv)
                 case OpCodes.OpReturn:
-                    self.pop_frame()
-                    self.stack.pop()
+                    frame = self.pop_frame()
+                    self.stack.sp = frame.base_pointer - 1
                     self.stack.push(NULL)
+                case OpCodes.OpGetLocal:
+                    local_index = int.from_bytes(ins[ip + 1 : ip + 2], "big")
+                    self.current_frame().ip += 1
+                    obj = self.stack.store[self.current_frame().base_pointer + local_index]
+                    if obj is None:
+                        raise RuntimeError("local cannot be None")
+                    self.stack.push(obj)
+                case OpCodes.OpSetLocal:
+                    local_index = int.from_bytes(ins[ip + 1 : ip + 2], "big")
+                    self.current_frame().ip += 1
+                    self.stack.store[
+                        self.current_frame().base_pointer + local_index
+                    ] = self.stack.pop()
 
             ip += 1
 
@@ -261,10 +276,8 @@ class VM:
 
     @classmethod
     def from_compiler(cls, compiler: Compiler) -> Self:
-        main_fn = CompiledFunction(instructions=compiler.bytecode().instructions)
-        main_frame = Frame(
-            fn=main_fn,
-        )
+        main_fn = CompiledFunction(instructions=compiler.bytecode().instructions, num_of_locals=0)
+        main_frame = Frame(fn=main_fn, base_pointer=0)
         frames: list[Frame | None] = [None] * MAX_FRAMES
         frames[0] = main_frame
         return cls(constants=compiler.bytecode().constants, frames=frames, frame_index=1)

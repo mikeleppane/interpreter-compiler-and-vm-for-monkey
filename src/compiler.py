@@ -198,8 +198,9 @@ class Compiler:
             if not self.is_last_instruction(OpCodes.OpReturnValue):
                 self.emit(OpCodes.OpReturn, [])
 
+            num_of_locals = self.symbol_table.num_definitions
             instructions = self.leave_scope()
-            compiled_fn = CompiledFunction(instructions=instructions)
+            compiled_fn = CompiledFunction(instructions=instructions, num_of_locals=num_of_locals)
             self.emit(opcode=OpCodes.OpConstant, operands=[self.add_constant(compiled_fn)])
         if isinstance(node, ReturnStatement) and node.return_value:
             self.compile(node.return_value)

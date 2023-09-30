@@ -217,6 +217,7 @@ class Hash(Object, Hashable):
 @dataclass(frozen=True)
 class CompiledFunction(Object):
     instructions: Instructions
+    num_of_locals: int
 
     def type(self) -> ObjectType:
         return OBJECT_TYPE.COMPILED_FUNCTION_OBJ

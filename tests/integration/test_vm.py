@@ -212,7 +212,40 @@ def test_functions_without_return_value(input: str, expected: Any) -> None:
             "let returnsOne = fn() { 1; };let returnsOneReturner = fn() { returnsOne; };returnsOneReturner()();",
             1,
         ],
+        [
+            "let returnsOneReturner = fn() { let returnsOne = fn() { 1; };returnsOne;};returnsOneReturner()();",
+            1,
+        ],
     ],
 )
 def test_first_class_functions(input: str, expected: Any) -> None:
+    run_vm_test(input, expected)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        [
+            "let one = fn() { let one = 1; one };one();",
+            1,
+        ],
+        [
+            "let oneAndTwo = fn() { let one = 1; let two = 2; one + two; };oneAndTwo();",
+            3,
+        ],
+        [
+            "let oneAndTwo = fn() { let one = 1; let two = 2; one + two; };let threeAndFour = fn() { let three = 3; let four = 4; three + four; };oneAndTwo() + threeAndFour();",
+            10,
+        ],
+        [
+            "let firstFoobar = fn() { let foobar = 50; foobar; };let secondFoobar = fn() { let foobar = 100; foobar; };firstFoobar() + secondFoobar();",
+            150,
+        ],
+        [
+            "let globalSeed = 50;let minusOne = fn() {let num = 1;globalSeed - num;}let minusTwo = fn() {let num = 2;globalSeed - num;}minusOne() + minusTwo();",
+            97,
+        ],
+    ],
+)
+def test_calling_functions_with_bindings(input: str, expected: Any) -> None:
     run_vm_test(input, expected)
